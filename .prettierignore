@@ -1,0 +1,23 @@
+.DS_Store
+node_modules
+.env
+.env.*
+!.env.example
+CHANGELOG.md
+
+# PNPM
+pnpm-lock.yaml
+pnpm-workspace.yaml
+**/.changeset/
+# **/package.json
+**/.vercel
+**/.contentlayer
+**/.svelte-kit
+**/build
+**/dist
+
+# Vite
+**/vite.config.js.timestamp-*
+**/vite.config.ts.timestamp-*
+
+**/*.md

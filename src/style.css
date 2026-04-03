@@ -1,0 +1,41 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+body {
+    background: #1a1a2e;
+    overflow: hidden;
+    font-family: monospace;
+}
+canvas {
+    display: block;
+}
+#ui {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    color: #e0d8c0;
+    font-size: 12px;
+    line-height: 1.8;
+    background: rgba(0, 0, 0, 0.45);
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    pointer-events: none;
+}
+#ui b {
+    color: #f0c060;
+}
+#gamepad-indicator {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    color: #e0d8c0;
+    font-size: 12px;
+    background: rgba(0, 0, 0, 0.45);
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    pointer-events: none;
+}
