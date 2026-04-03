@@ -1,5 +1,14 @@
 import * as THREE from 'three';
-import { animateTracks, boomPivot, dustSpawnL, dustSpawnR, excavator, flameSpawn, godetPivot, stickPivot } from './excavator';
+import {
+    animateTracks,
+    boomPivot,
+    dustSpawnL,
+    dustSpawnR,
+    excavator,
+    flameSpawn,
+    godetPivot,
+    stickPivot
+} from './excavator';
 import { deadzone, getGamepad, keys } from './input';
 import './lights';
 import { camera, controls, renderer, scene } from './scene';
@@ -13,6 +22,11 @@ const ARM_SPEED = 1.2;
 let heading = 0;
 const slopeQuat = new THREE.Quaternion();
 const _worldUp = new THREE.Vector3(0, 1, 0);
+
+// ── Chase cam ──
+controls.enabled = false;
+const _camLookAt  = new THREE.Vector3();
+const _prevExcPos = new THREE.Vector3();
 
 // ── Explosion de rochers ──
 interface Fragment {
@@ -31,10 +45,7 @@ function explodeRock(position: THREE.Vector3, radius: number): void {
     const count = 6 + Math.round(radius * 8);
     for (let i = 0; i < count; i++) {
         const scale = radius * (4.0 + Math.random() * 8);
-        const mesh = new THREE.Mesh(
-            _fragGeo,
-            new THREE.MeshLambertMaterial({ color: 0x7a7060 })
-        );
+        const mesh = new THREE.Mesh(_fragGeo, new THREE.MeshLambertMaterial({ color: 0x7a7060 }));
         mesh.scale.setScalar(scale);
         mesh.position.copy(position);
         scene.add(mesh);
@@ -44,11 +55,7 @@ function explodeRock(position: THREE.Vector3, radius: number): void {
         const upBias = 5 + Math.random() * 4;
         fragments.push({
             mesh,
-            vel: new THREE.Vector3(
-                Math.cos(theta) * speed,
-                upBias,
-                Math.sin(theta) * speed
-            ),
+            vel: new THREE.Vector3(Math.cos(theta) * speed, upBias, Math.sin(theta) * speed),
             angVel: new THREE.Vector3(
                 (Math.random() - 0.5) * 12,
                 (Math.random() - 0.5) * 12,
@@ -56,7 +63,7 @@ function explodeRock(position: THREE.Vector3, radius: number): void {
             ),
             age: 0,
             maxAge: 0.5 + Math.random() * 0.4,
-            initialScale: scale,
+            initialScale: scale
         });
     }
 }
@@ -91,7 +98,7 @@ const _flameGeo = new THREE.IcosahedronGeometry(0.07, 0);
 const _flameMats = [
     new THREE.MeshBasicMaterial({ color: 0xff3300 }),
     new THREE.MeshBasicMaterial({ color: 0xff8800 }),
-    new THREE.MeshBasicMaterial({ color: 0xffdd00 }),
+    new THREE.MeshBasicMaterial({ color: 0xffdd00 })
 ];
 const _flameSpawnPos = new THREE.Vector3();
 let _flameTimer = 0;
@@ -113,7 +120,7 @@ function spawnFlame(): void {
         ),
         age: 0,
         maxAge: 0.2 + Math.random() * 0.25,
-        initialScale: scale,
+        initialScale: scale
     });
 }
 
@@ -134,28 +141,32 @@ function updateFlames(dt: number): void {
 
 // ── Poussière chenilles ──
 const dusts: Flame[] = [];
-const _dustGeo  = new THREE.SphereGeometry(0.1, 4, 3);
+const _dustGeo = new THREE.SphereGeometry(0.1, 4, 3);
 const _dustMats = [
     new THREE.MeshBasicMaterial({ color: 0x7a6348 }),
     new THREE.MeshBasicMaterial({ color: 0x6e5a40 }),
-    new THREE.MeshBasicMaterial({ color: 0x857060 }),
+    new THREE.MeshBasicMaterial({ color: 0x857060 })
 ];
 const _dustPosL = new THREE.Vector3();
 const _dustPosR = new THREE.Vector3();
-let _dustTimer  = 0;
+let _dustTimer = 0;
 
 function spawnDust(pos: THREE.Vector3): void {
     const scale = 1.0 + Math.random() * 1.5;
-    const mesh  = new THREE.Mesh(_dustGeo, _dustMats[Math.floor(Math.random() * 3)]);
+    const mesh = new THREE.Mesh(_dustGeo, _dustMats[Math.floor(Math.random() * 3)]);
     mesh.scale.setScalar(0.01);
     mesh.position.copy(pos);
     scene.add(mesh);
     dusts.push({
         mesh,
-        vel: new THREE.Vector3((Math.random() - 0.5) * 2, 0.4 + Math.random() * 0.6, (Math.random() - 0.5) * 2),
+        vel: new THREE.Vector3(
+            (Math.random() - 0.5) * 2,
+            0.4 + Math.random() * 0.6,
+            (Math.random() - 0.5) * 2
+        ),
         age: 0,
         maxAge: 0.7 + Math.random() * 0.8,
-        initialScale: scale,
+        initialScale: scale
     });
 }
 
@@ -183,14 +194,14 @@ function explodeBarrel(position: THREE.Vector3): void {
     // Boule de feu
     for (let i = 0; i < 22; i++) {
         const scale = 2.0 + Math.random() * 3.0;
-        const mat   = _flameMats[Math.floor(Math.random() * _flameMats.length)];
-        const mesh  = new THREE.Mesh(_flameGeo, mat);
+        const mat = _flameMats[Math.floor(Math.random() * _flameMats.length)];
+        const mesh = new THREE.Mesh(_flameGeo, mat);
         mesh.scale.setScalar(scale);
         mesh.position.copy(position);
         scene.add(mesh);
         const speed = 5 + Math.random() * 7;
         const theta = Math.random() * Math.PI * 2;
-        const phi   = Math.random() * Math.PI;
+        const phi = Math.random() * Math.PI;
         flames.push({
             mesh,
             vel: new THREE.Vector3(
@@ -200,22 +211,26 @@ function explodeBarrel(position: THREE.Vector3): void {
             ),
             age: 0,
             maxAge: 0.5 + Math.random() * 0.5,
-            initialScale: scale,
+            initialScale: scale
         });
     }
     // Fumée noire
     for (let i = 0; i < 10; i++) {
         const scale = 2.5 + Math.random() * 2.0;
-        const mesh  = new THREE.Mesh(_dustGeo, _smokeMat);
+        const mesh = new THREE.Mesh(_dustGeo, _smokeMat);
         mesh.scale.setScalar(0.01);
         mesh.position.copy(position);
         scene.add(mesh);
         dusts.push({
             mesh,
-            vel: new THREE.Vector3((Math.random() - 0.5) * 2, 4 + Math.random() * 4, (Math.random() - 0.5) * 2),
+            vel: new THREE.Vector3(
+                (Math.random() - 0.5) * 2,
+                4 + Math.random() * 4,
+                (Math.random() - 0.5) * 2
+            ),
             age: 0,
             maxAge: 1.2 + Math.random() * 0.8,
-            initialScale: scale,
+            initialScale: scale
         });
     }
 }
@@ -255,9 +270,7 @@ function update(dt: number): void {
     slopeQuat.slerp(targetSlopeQuat, 1 - Math.exp(-5 * dt));
 
     // Orientation finale = inclinaison terrain × cap
-    excavator.quaternion.copy(slopeQuat).multiply(
-        new THREE.Quaternion().setFromAxisAngle(_worldUp, heading)
-    );
+    excavator.quaternion.copy(slopeQuat).multiply(new THREE.Quaternion().setFromAxisAngle(_worldUp, heading));
 
     // Chenilles : animer la rotation des roues selon la vitesse
     animateTracks(fwd * SPEED * dt * 0.5);
@@ -293,7 +306,7 @@ function update(dt: number): void {
 
     // ── Collision barils ──
     for (let i = barrels.length - 1; i >= 0; i--) {
-        const b  = barrels[i];
+        const b = barrels[i];
         const dx = excavator.position.x - b.obj.position.x;
         const dz = excavator.position.z - b.obj.position.z;
         if (dx * dx + dz * dz < (b.radius + 1.2) ** 2) {
@@ -325,20 +338,26 @@ function update(dt: number): void {
     const godetRot = (keys['KeyU'] ? 1 : 0) - (keys['KeyO'] ? 1 : 0) - gpRY;
 
     boomPivot.rotation.x = THREE.MathUtils.clamp(boomPivot.rotation.x - boomUp * ARM_SPEED * dt, -1.2, 0.3);
-    stickPivot.rotation.x = THREE.MathUtils.clamp(
-        stickPivot.rotation.x + stickExt * ARM_SPEED * dt,
-        0,
-        1.4
-    );
+    stickPivot.rotation.x = THREE.MathUtils.clamp(stickPivot.rotation.x + stickExt * ARM_SPEED * dt, 0, 1.4);
     godetPivot.rotation.x = THREE.MathUtils.clamp(
         godetPivot.rotation.x + godetRot * ARM_SPEED * dt,
         -1.0,
         0.8
     );
 
-    // Caméra suit la pelleteuse
-    controls.target.lerp(excavator.position.clone().add(new THREE.Vector3(0, 1.5, 0)), 0.08);
-    controls.update();
+    // ── Chase cam ──
+    // Translate la caméra avec la pelleteuse (pas de lag de position)
+    camera.position.add(excavator.position.clone().sub(_prevExcPos));
+    _prevExcPos.copy(excavator.position);
+    // Quand on bouge : dérive doucement derrière. À l'arrêt : reste en place.
+    if (Math.abs(fwd) > 0.05 || Math.abs(rot) > 0.05) {
+        const desired = excavator.position.clone().add(
+            new THREE.Vector3(0, 5, -12).applyAxisAngle(_worldUp, heading)
+        );
+        camera.position.lerp(desired, 1 - Math.exp(-1.5 * dt));
+    }
+    _camLookAt.lerp(excavator.position.clone().add(new THREE.Vector3(0, 1.5, 0)), 1 - Math.exp(-8 * dt));
+    camera.lookAt(_camLookAt);
 }
 
 function animate(): void {
