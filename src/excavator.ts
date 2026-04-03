@@ -22,7 +22,7 @@ const wheels: THREE.Mesh[] = [];
 function makeChenille(xOff: number) {
     const g = new THREE.Group();
     // Corps principal
-    const hull = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.55, 1.1), MAT_RUBBER);
+    const hull = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.99, 2.1), MAT_RUBBER);
     hull.position.y = 0.27;
     hull.castShadow = true;
     g.add(hull);
@@ -30,7 +30,7 @@ function makeChenille(xOff: number) {
     [-1.1, 1.1].forEach((zOff) => {
         const w = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.1, 12), MAT_DARK);
         w.rotation.z = Math.PI / 2;
-        w.position.set(zOff, 0.4, 0);
+        w.position.set(0, 0.4, zOff);
         wheels.push(w);
         g.add(w);
     });
@@ -40,9 +40,8 @@ function makeChenille(xOff: number) {
 
 export const chenilleL = makeChenille(0);
 export const chenilleR = makeChenille(0);
-// On les sépare sur Z
-chenilleL.position.z = -0.85;
-chenilleR.position.z = 0.85;
+chenilleL.position.x = -0.85;
+chenilleR.position.x = 0.85;
 excavator.add(chenilleL);
 excavator.add(chenilleR);
 
@@ -51,30 +50,30 @@ export const pivot = new THREE.Group(); // rotation du corps + bras
 excavator.add(pivot);
 pivot.position.y = 0.55;
 
-const body = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.65, 1.5), MAT_YELLOW);
+const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.65, 2.4), MAT_YELLOW);
 body.position.y = 0.32;
 body.castShadow = true;
 pivot.add(body);
 
-// Cabine
-const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 1.1), MAT_CABIN);
-cabin.position.set(-0.45, 1.05, 0);
+// Cabine (côté gauche, à l'arrière)
+const cabin = new THREE.Mesh(new THREE.BoxGeometry(1, 1.7, 1), MAT_CABIN);
+cabin.position.set(-0.45, 1.05, 0.3);
 cabin.castShadow = true;
 pivot.add(cabin);
-// Vitres
-const glass = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.6, 0.9), MAT_GLASS);
-glass.position.set(0.15, 1.05, 0);
+// Vitre avant
+const glass = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.8, 0.05), MAT_GLASS);
+glass.position.set(-0.45, 1.45, 0.8);
 pivot.add(glass);
 
 // Contrepoids arrière
-const cw = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.55, 1.4), MAT_DARK);
-cw.position.set(-1.2, 0.65, 0);
+const cw = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.55, 0.9), MAT_DARK);
+cw.position.set(0, 0.65, -0.9);
 pivot.add(cw);
 
 // ─── Bras articulé ────────────────────────────────────────────────────────
 // boom (grande flèche)
 export const boomPivot = new THREE.Group();
-boomPivot.position.set(1.0, 0.7, 0);
+boomPivot.position.set(0, 0.7, 1.0);
 pivot.add(boomPivot);
 
 const boom = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.24, 1.9), MAT_ARM);

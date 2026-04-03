@@ -25,8 +25,8 @@ function update(dt: number): void {
     const rot =
         (keys['KeyQ'] || keys['ArrowLeft'] ? 1 : 0) - (keys['KeyD'] || keys['ArrowRight'] ? 1 : 0) + gpLX;
 
-    excavator.rotation.y -= rot * TURN * dt;
-    const dir = new THREE.Vector3(0, 0, -1).applyEuler(excavator.rotation);
+    excavator.rotation.y += rot * TURN * dt;
+    const dir = new THREE.Vector3(0, 0, 1).applyEuler(excavator.rotation);
     excavator.position.addScaledVector(dir, fwd * SPEED * dt);
 
     // Coller au terrain
