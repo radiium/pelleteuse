@@ -15,7 +15,7 @@ import { camera, controls, renderer, scene } from './scene';
 import { barrels, rocks, sampleHeight, terrainGeo } from './terrain';
 
 const timer = new THREE.Timer();
-const SPEED = 5;
+const SPEED = 8;
 const TURN = 1.8;
 const ARM_SPEED = 1.2;
 
@@ -352,7 +352,7 @@ function update(dt: number): void {
     // Quand on bouge : dérive doucement derrière. À l'arrêt : reste en place.
     if (Math.abs(fwd) > 0.05 || Math.abs(rot) > 0.05) {
         const desired = excavator.position.clone().add(
-            new THREE.Vector3(0, 5, -12).applyAxisAngle(_worldUp, heading)
+            new THREE.Vector3(0, 7, -20).applyAxisAngle(_worldUp, heading)
         );
         camera.position.lerp(desired, 1 - Math.exp(-1.5 * dt));
     }
