@@ -96,17 +96,25 @@ export const godetPivot = new THREE.Group();
 godetPivot.position.z = 1.4;
 stickPivot.add(godetPivot);
 
-const godetShape = new THREE.Shape();
-godetShape.moveTo(-0.4, 0);
-godetShape.lineTo(0.4, 0);
-godetShape.lineTo(0.5, -0.5);
-godetShape.lineTo(0, -0.8);
-godetShape.lineTo(-0.5, -0.5);
-godetShape.closePath();
-const godetGeo = new THREE.ExtrudeGeometry(godetShape, { depth: 0.7, bevelEnabled: false });
-const godet = new THREE.Mesh(godetGeo, MAT_ARM);
-godet.position.set(-0.4, 0, -0.35);
-godet.rotation.x = Math.PI / 2;
+// Prisme triangulaire : section en triangle rectangle
+// Sommet 1 : (0, 0)   — pivot (angle droit)
+// Sommet 2 : (BD, 0)  — avant-haut
+// Sommet 3 : (BD,-BH) — arête de coupe avant-bas  →  creux orienté vers le bas
+const BW = 0.82;
+const BD = 0.62;
+const BH = 0.68;
+
+const bucketProfile = new THREE.Shape();
+bucketProfile.moveTo(0, 0);
+bucketProfile.lineTo(BD, 0);
+bucketProfile.lineTo(BD, -BH);
+bucketProfile.closePath();
+
+const bucketGeo = new THREE.ExtrudeGeometry(bucketProfile, { depth: BW, bevelEnabled: false });
+const godet = new THREE.Mesh(bucketGeo, MAT_ARM);
+// rotation.y = -PI/2 : axe Z de la shape → +Z monde (avant), extrusion → -X monde
+godet.rotation.y = -Math.PI / 2;
+godet.position.set(BW / 2, 0, 0); // centrage en X
 godet.castShadow = true;
 godetPivot.add(godet);
 
