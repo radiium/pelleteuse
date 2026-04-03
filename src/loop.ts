@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { scene, renderer, camera, controls } from './scene';
 import './lights';
-import { terrainGeo, sampleHeight } from './terrain';
+import { terrainGeo, sampleHeight, rocks } from './terrain';
 import { excavator, boomPivot, stickPivot, godetPivot, animateTracks } from './excavator';
 import { keys, getGamepad, deadzone } from './input';
 
@@ -13,6 +13,70 @@ const ARM_SPEED = 1.2;
 let heading = 0;
 const slopeQuat = new THREE.Quaternion();
 const _worldUp = new THREE.Vector3(0, 1, 0);
+
+// ── Explosion de rochers ──
+interface Fragment {
+    mesh: THREE.Mesh;
+    vel: THREE.Vector3;
+    angVel: THREE.Vector3;
+    age: number;
+    maxAge: number;
+    initialScale: number;
+}
+const fragments: Fragment[] = [];
+const _fragGeo = new THREE.IcosahedronGeometry(0.1, 0);
+const _gravity = new THREE.Vector3(0, -12, 0);
+
+function explodeRock(position: THREE.Vector3, radius: number): void {
+    const count = 6 + Math.round(radius * 8);
+    for (let i = 0; i < count; i++) {
+        const scale = radius * (4.0 + Math.random() * 8);
+        const mesh = new THREE.Mesh(
+            _fragGeo,
+            new THREE.MeshLambertMaterial({ color: 0x7a7060 })
+        );
+        mesh.scale.setScalar(scale);
+        mesh.position.copy(position);
+        scene.add(mesh);
+
+        const speed = 3 + Math.random() * 4;
+        const theta = Math.random() * Math.PI * 2;
+        const upBias = 1.5 + Math.random() * 2;
+        fragments.push({
+            mesh,
+            vel: new THREE.Vector3(
+                Math.cos(theta) * speed,
+                upBias,
+                Math.sin(theta) * speed
+            ),
+            angVel: new THREE.Vector3(
+                (Math.random() - 0.5) * 12,
+                (Math.random() - 0.5) * 12,
+                (Math.random() - 0.5) * 12
+            ),
+            age: 0,
+            maxAge: 0.5 + Math.random() * 0.4,
+            initialScale: scale,
+        });
+    }
+}
+
+function updateFragments(dt: number): void {
+    for (let i = fragments.length - 1; i >= 0; i--) {
+        const f = fragments[i];
+        f.age += dt;
+        f.vel.addScaledVector(_gravity, dt);
+        f.mesh.position.addScaledVector(f.vel, dt);
+        f.mesh.rotation.x += f.angVel.x * dt;
+        f.mesh.rotation.y += f.angVel.y * dt;
+        f.mesh.rotation.z += f.angVel.z * dt;
+        f.mesh.scale.setScalar(f.initialScale * (1 - f.age / f.maxAge));
+        if (f.age >= f.maxAge) {
+            scene.remove(f.mesh);
+            fragments.splice(i, 1);
+        }
+    }
+}
 
 function update(dt: number): void {
     const gp = getGamepad();
@@ -55,6 +119,20 @@ function update(dt: number): void {
 
     // Chenilles : animer la rotation des roues selon la vitesse
     animateTracks(fwd * SPEED * dt * 0.5);
+
+    // ── Collision rochers ──
+    for (let i = rocks.length - 1; i >= 0; i--) {
+        const rock = rocks[i];
+        const dx = excavator.position.x - rock.mesh.position.x;
+        const dz = excavator.position.z - rock.mesh.position.z;
+        const collisionR = rock.radius + 1.2;
+        if (dx * dx + dz * dz < collisionR * collisionR) {
+            scene.remove(rock.mesh);
+            explodeRock(rock.mesh.position, rock.radius);
+            rocks.splice(i, 1);
+        }
+    }
+    updateFragments(dt);
 
     // ── Bras ──
     const boomUp =

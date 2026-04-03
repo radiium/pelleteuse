@@ -63,6 +63,8 @@ function buildTerrain() {
 export const terrainGeo = buildTerrain();
 
 // Quelques rochers
+export const rocks: Array<{ mesh: THREE.Mesh; radius: number }> = [];
+
 for (let i = 0; i < 20; i++) {
     const r = 0.3 + Math.random() * 0.9;
     const geo = new THREE.DodecahedronGeometry(r, 0);
@@ -78,4 +80,5 @@ for (let i = 0; i < 20; i++) {
         rz
     );
     scene.add(rock);
+    rocks.push({ mesh: rock, radius: r });
 }
