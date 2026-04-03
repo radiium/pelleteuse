@@ -132,9 +132,9 @@ godet.castShadow = true;
 godetPivot.add(godet);
 
 // Angles initiaux du bras
-boomPivot.rotation.x = -0.4;
-stickPivot.rotation.x = 0.5;
-godetPivot.rotation.x = -0.4;
+boomPivot.rotation.x = -1.2;
+stickPivot.rotation.x = 1.4;
+godetPivot.rotation.x = 0.8;
 
 export function animateTracks(wheelSpin: number): void {
     wheels.forEach((w) => {
