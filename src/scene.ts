@@ -13,7 +13,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 document.body.appendChild(renderer.domElement);
 
 export const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 300);
-camera.position.set(0, 12, 20);
+camera.position.set(0, 12, -20);
 
 export const controls = new OrbitControls(camera, renderer.domElement);
 controls.mouseButtons = { RIGHT: THREE.MOUSE.ROTATE };
