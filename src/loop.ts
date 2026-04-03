@@ -41,7 +41,7 @@ function explodeRock(position: THREE.Vector3, radius: number): void {
 
         const speed = 3 + Math.random() * 4;
         const theta = Math.random() * Math.PI * 2;
-        const upBias = 1.5 + Math.random() * 2;
+        const upBias = 5 + Math.random() * 4;
         fragments.push({
             mesh,
             vel: new THREE.Vector3(
