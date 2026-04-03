@@ -1,2 +1,2 @@
+import './loop';
 import './style.css';
-import './loop'

@@ -88,3 +88,30 @@ for (let i = 0; i < 20; i++) {
     scene.add(rock);
     rocks.push({ mesh: rock, radius: r });
 }
+
+// Barils explosifs
+export const barrels: Array<{ obj: THREE.Object3D; radius: number }> = [];
+
+const MAT_BARREL = new THREE.MeshLambertMaterial({ color: 0xcc2200 });
+const MAT_BAND    = new THREE.MeshLambertMaterial({ color: 0x111111 });
+
+for (let i = 0; i < 10; i++) {
+    let bx: number, bz: number;
+    do {
+        bx = (Math.random() - 0.5) * (TERRAIN_SIZE - 10);
+        bz = (Math.random() - 0.5) * (TERRAIN_SIZE - 10);
+    } while (Math.sqrt(bx * bx + bz * bz) < 10);
+
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.75, 10), MAT_BARREL);
+    body.castShadow = true;
+    g.add(body);
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.30, 0.10, 10), MAT_BAND);
+    band.position.y = 0.12;
+    g.add(band);
+
+    const bh = sampleHeight(bx, bz, terrainGeo.attributes.position);
+    g.position.set(bx, bh + 0.375, bz);
+    scene.add(g);
+    barrels.push({ obj: g, radius: 0.32 });
+}

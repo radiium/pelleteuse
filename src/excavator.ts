@@ -45,6 +45,14 @@ chenilleR.position.x = 0.85;
 excavator.add(chenilleL);
 excavator.add(chenilleR);
 
+// Points d'émission de poussière (derrière chaque chenille, au sol)
+export const dustSpawnL = new THREE.Object3D();
+dustSpawnL.position.set(-0.85, 0.05, -0.8);
+excavator.add(dustSpawnL);
+export const dustSpawnR = new THREE.Object3D();
+dustSpawnR.position.set(0.85, 0.05, -0.8);
+excavator.add(dustSpawnR);
+
 // Corps principal (plateau tournant)
 export const pivot = new THREE.Group(); // rotation du corps + bras
 excavator.add(pivot);
