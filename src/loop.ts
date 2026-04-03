@@ -98,7 +98,7 @@ let _flameTimer = 0;
 
 function spawnFlame(): void {
     flameSpawn.getWorldPosition(_flameSpawnPos);
-    const scale = 0.7 + Math.random() * 0.8;
+    const scale = 2.0 + Math.random() * 2.0;
     const mat = _flameMats[Math.floor(Math.random() * _flameMats.length)];
     const mesh = new THREE.Mesh(_flameGeo, mat);
     mesh.scale.setScalar(scale);
@@ -107,9 +107,9 @@ function spawnFlame(): void {
     flames.push({
         mesh,
         vel: new THREE.Vector3(
-            (Math.random() - 0.5) * 1.2,
+            (Math.random() - 0.5) * 5.0,
             3 + Math.random() * 3,
-            (Math.random() - 0.5) * 1.2
+            (Math.random() - 0.5) * 5.0
         ),
         age: 0,
         maxAge: 0.2 + Math.random() * 0.25,
@@ -192,9 +192,9 @@ function update(dt: number): void {
     const fireActive = keys['KeyF'] || (gp?.buttons[0]?.pressed ?? false);
     if (fireActive) {
         _flameTimer += dt;
-        while (_flameTimer >= 0.04) {
-            _flameTimer -= 0.04;
-            spawnFlame();
+        while (_flameTimer >= 0.03) {
+            _flameTimer -= 0.03;
+            for (let f = 0; f < 4; f++) spawnFlame();
         }
     } else {
         _flameTimer = 0;
