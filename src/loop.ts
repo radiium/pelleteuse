@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { scene, renderer, camera, controls } from './scene';
 import './lights';
 import { terrainGeo, sampleHeight, rocks } from './terrain';
-import { excavator, boomPivot, stickPivot, godetPivot, animateTracks } from './excavator';
+import { excavator, boomPivot, stickPivot, godetPivot, animateTracks, flameSpawn } from './excavator';
 import { keys, getGamepad, deadzone } from './input';
 
 const timer = new THREE.Timer();
@@ -78,6 +78,60 @@ function updateFragments(dt: number): void {
     }
 }
 
+// ── Flammes ──
+interface Flame {
+    mesh: THREE.Mesh;
+    vel: THREE.Vector3;
+    age: number;
+    maxAge: number;
+    initialScale: number;
+}
+const flames: Flame[] = [];
+const _flameGeo = new THREE.IcosahedronGeometry(0.07, 0);
+const _flameMats = [
+    new THREE.MeshBasicMaterial({ color: 0xff3300 }),
+    new THREE.MeshBasicMaterial({ color: 0xff8800 }),
+    new THREE.MeshBasicMaterial({ color: 0xffdd00 }),
+];
+const _flameSpawnPos = new THREE.Vector3();
+let _flameTimer = 0;
+
+function spawnFlame(): void {
+    flameSpawn.getWorldPosition(_flameSpawnPos);
+    const scale = 0.7 + Math.random() * 0.8;
+    const mat = _flameMats[Math.floor(Math.random() * _flameMats.length)];
+    const mesh = new THREE.Mesh(_flameGeo, mat);
+    mesh.scale.setScalar(scale);
+    mesh.position.copy(_flameSpawnPos);
+    scene.add(mesh);
+    flames.push({
+        mesh,
+        vel: new THREE.Vector3(
+            (Math.random() - 0.5) * 1.2,
+            3 + Math.random() * 3,
+            (Math.random() - 0.5) * 1.2
+        ),
+        age: 0,
+        maxAge: 0.2 + Math.random() * 0.25,
+        initialScale: scale,
+    });
+}
+
+function updateFlames(dt: number): void {
+    for (let i = flames.length - 1; i >= 0; i--) {
+        const f = flames[i];
+        f.age += dt;
+        f.vel.x *= 0.92;
+        f.vel.z *= 0.92;
+        f.mesh.position.addScaledVector(f.vel, dt);
+        f.mesh.scale.setScalar(f.initialScale * (1 - f.age / f.maxAge));
+        if (f.age >= f.maxAge) {
+            scene.remove(f.mesh);
+            flames.splice(i, 1);
+        }
+    }
+}
+
 function update(dt: number): void {
     const gp = getGamepad();
 
@@ -133,6 +187,19 @@ function update(dt: number): void {
         }
     }
     updateFragments(dt);
+
+    // ── Flammes (F / bouton 0) ──
+    const fireActive = keys['KeyF'] || (gp?.buttons[0]?.pressed ?? false);
+    if (fireActive) {
+        _flameTimer += dt;
+        while (_flameTimer >= 0.04) {
+            _flameTimer -= 0.04;
+            spawnFlame();
+        }
+    } else {
+        _flameTimer = 0;
+    }
+    updateFlames(dt);
 
     // ── Bras ──
     const boomUp =

@@ -65,6 +65,11 @@ const glass = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.8, 0.05), MAT_GLASS);
 glass.position.set(-0.45, 1.45, 0.8);
 pivot.add(glass);
 
+// Point d'émission des flammes (sommet de la cabine)
+export const flameSpawn = new THREE.Object3D();
+flameSpawn.position.set(-0.45, 1.05 + 1.7 / 2 + 0.1, 0.3);
+pivot.add(flameSpawn);
+
 // Contrepoids arrière
 const cw = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.55, 0.9), MAT_DARK);
 cw.position.set(0, 0.65, -0.9);
