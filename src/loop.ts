@@ -145,7 +145,7 @@ function update(dt: number): void {
     boomPivot.rotation.x = THREE.MathUtils.clamp(boomPivot.rotation.x - boomUp * ARM_SPEED * dt, -1.2, 0.3);
     stickPivot.rotation.x = THREE.MathUtils.clamp(
         stickPivot.rotation.x + stickExt * ARM_SPEED * dt,
-        -0.2,
+        0,
         1.4
     );
     godetPivot.rotation.x = THREE.MathUtils.clamp(

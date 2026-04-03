@@ -73,10 +73,10 @@ pivot.add(cw);
 // ─── Bras articulé ────────────────────────────────────────────────────────
 // boom (grande flèche)
 export const boomPivot = new THREE.Group();
-boomPivot.position.set(0, 0.7, 1.0);
+boomPivot.position.set(0.4, 0.7, 1.0);
 pivot.add(boomPivot);
 
-const boom = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.24, 1.9), MAT_ARM);
+const boom = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.4, 2.1), MAT_ARM);
 boom.position.z = 0.95;
 boom.castShadow = true;
 boomPivot.add(boom);
@@ -86,7 +86,7 @@ export const stickPivot = new THREE.Group();
 stickPivot.position.z = 1.9;
 boomPivot.add(stickPivot);
 
-const stick = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.18, 1.4), MAT_ARM);
+const stick = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.22, 1.4), MAT_ARM);
 stick.position.z = 0.7;
 stick.castShadow = true;
 stickPivot.add(stick);
