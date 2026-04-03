@@ -10,6 +10,10 @@ const SPEED = 5;
 const TURN = 1.8;
 const ARM_SPEED = 1.2;
 
+let heading = 0;
+const slopeQuat = new THREE.Quaternion();
+const _worldUp = new THREE.Vector3(0, 1, 0);
+
 function update(dt: number): void {
     const gp = getGamepad();
 
@@ -25,14 +29,29 @@ function update(dt: number): void {
     const rot =
         (keys['KeyQ'] || keys['ArrowLeft'] ? 1 : 0) - (keys['KeyD'] || keys['ArrowRight'] ? 1 : 0) + gpLX;
 
-    excavator.rotation.y += rot * TURN * dt;
-    const dir = new THREE.Vector3(0, 0, 1).applyEuler(excavator.rotation);
+    heading += rot * TURN * dt;
+    const dir = new THREE.Vector3(Math.sin(heading), 0, Math.cos(heading));
     excavator.position.addScaledVector(dir, fwd * SPEED * dt);
 
     // Coller au terrain
     const pos = terrainGeo.attributes.position;
     const h = sampleHeight(excavator.position.x, excavator.position.z, pos);
     excavator.position.y = h;
+
+    // Inclinaison selon la pente du terrain
+    const sd = 1.5;
+    const hR = sampleHeight(excavator.position.x + sd, excavator.position.z, pos);
+    const hF = sampleHeight(excavator.position.x, excavator.position.z + sd, pos);
+    const vRight = new THREE.Vector3(sd, hR - h, 0);
+    const vFwd = new THREE.Vector3(0, hF - h, sd);
+    const terrainNormal = new THREE.Vector3().crossVectors(vFwd, vRight).normalize();
+    const targetSlopeQuat = new THREE.Quaternion().setFromUnitVectors(_worldUp, terrainNormal);
+    slopeQuat.slerp(targetSlopeQuat, 1 - Math.exp(-8 * dt));
+
+    // Orientation finale = inclinaison terrain × cap
+    excavator.quaternion.copy(slopeQuat).multiply(
+        new THREE.Quaternion().setFromAxisAngle(_worldUp, heading)
+    );
 
     // Chenilles : animer la rotation des roues selon la vitesse
     animateTracks(fwd * SPEED * dt * 0.5);
