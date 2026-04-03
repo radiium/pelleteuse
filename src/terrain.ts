@@ -9,12 +9,18 @@ export function sampleHeight(
     z: number,
     posAttr: THREE.BufferAttribute | THREE.InterleavedBufferAttribute
 ): number {
-    const ix = Math.round((x / TERRAIN_SIZE + 0.5) * TERRAIN_SEGS);
-    const iz = Math.round((z / TERRAIN_SIZE + 0.5) * TERRAIN_SEGS);
-    const idx =
-        Math.min(TERRAIN_SEGS, Math.max(0, iz)) * (TERRAIN_SEGS + 1) +
-        Math.min(TERRAIN_SEGS, Math.max(0, ix));
-    return posAttr.getY(idx) || 0;
+    const fx = (x / TERRAIN_SIZE + 0.5) * TERRAIN_SEGS;
+    const fz = (z / TERRAIN_SIZE + 0.5) * TERRAIN_SEGS;
+    const ix0 = Math.max(0, Math.min(TERRAIN_SEGS - 1, Math.floor(fx)));
+    const iz0 = Math.max(0, Math.min(TERRAIN_SEGS - 1, Math.floor(fz)));
+    const tx = fx - ix0;
+    const tz = fz - iz0;
+    const row = TERRAIN_SEGS + 1;
+    const h00 = posAttr.getY(iz0 * row + ix0) || 0;
+    const h10 = posAttr.getY(iz0 * row + ix0 + 1) || 0;
+    const h01 = posAttr.getY((iz0 + 1) * row + ix0) || 0;
+    const h11 = posAttr.getY((iz0 + 1) * row + ix0 + 1) || 0;
+    return h00 * (1 - tx) * (1 - tz) + h10 * tx * (1 - tz) + h01 * (1 - tx) * tz + h11 * tx * tz;
 }
 
 function buildTerrain() {

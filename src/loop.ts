@@ -110,7 +110,7 @@ function update(dt: number): void {
     const vFwd = new THREE.Vector3(0, hF - h, sd);
     const terrainNormal = new THREE.Vector3().crossVectors(vFwd, vRight).normalize();
     const targetSlopeQuat = new THREE.Quaternion().setFromUnitVectors(_worldUp, terrainNormal);
-    slopeQuat.slerp(targetSlopeQuat, 1 - Math.exp(-8 * dt));
+    slopeQuat.slerp(targetSlopeQuat, 1 - Math.exp(-5 * dt));
 
     // Orientation finale = inclinaison terrain × cap
     excavator.quaternion.copy(slopeQuat).multiply(
