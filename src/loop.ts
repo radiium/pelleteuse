@@ -12,7 +12,7 @@ import {
 import { deadzone, getGamepad, keys } from './input';
 import './lights';
 import { camera, controls, renderer, scene } from './scene';
-import { barrels, rocks, sampleHeight, terrainGeo } from './terrain';
+import { barrels, rocks, sampleHeight, terrainGeo, trees } from './terrain';
 
 const timer = new THREE.Timer();
 const SPEED = 8;
@@ -235,6 +235,27 @@ function explodeBarrel(position: THREE.Vector3): void {
     }
 }
 
+// ── Arbres ──
+interface FallingTree {
+    group: THREE.Group;
+    fallAxis: THREE.Vector3;
+    angle: number;
+}
+const fallingTrees: FallingTree[] = [];
+
+function updateFallingTrees(dt: number): void {
+    for (let i = fallingTrees.length - 1; i >= 0; i--) {
+        const t = fallingTrees[i];
+        const delta = 2.0 * dt;
+        t.angle += delta;
+        t.group.rotateOnWorldAxis(t.fallAxis, delta);
+        if (t.angle >= Math.PI / 2) {
+            scene.remove(t.group);
+            fallingTrees.splice(i, 1);
+        }
+    }
+}
+
 function update(dt: number): void {
     const gp = getGamepad();
 
@@ -315,6 +336,20 @@ function update(dt: number): void {
             barrels.splice(i, 1);
         }
     }
+
+    // ── Collision arbres ──
+    for (let i = trees.length - 1; i >= 0; i--) {
+        const tree = trees[i];
+        const dx = excavator.position.x - tree.group.position.x;
+        const dz = excavator.position.z - tree.group.position.z;
+        if (dx * dx + dz * dz < (tree.radius + 1.3) ** 2) {
+            const fallDir = new THREE.Vector3(-dx, 0, -dz).normalize();
+            const fallAxis = new THREE.Vector3().crossVectors(_worldUp, fallDir).normalize();
+            fallingTrees.push({ group: tree.group, fallAxis, angle: 0 });
+            trees.splice(i, 1);
+        }
+    }
+    updateFallingTrees(dt);
 
     // ── Flammes (F / bouton 0) ──
     const fireActive = keys['KeyF'] || (gp?.buttons[0]?.pressed ?? false);

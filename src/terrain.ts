@@ -92,6 +92,42 @@ for (let i = 0; i < 20; i++) {
 // Barils explosifs
 export const barrels: Array<{ obj: THREE.Object3D; radius: number }> = [];
 
+// Arbres
+export const trees: Array<{ group: THREE.Group; radius: number }> = [];
+
+const MAT_TRUNK  = new THREE.MeshLambertMaterial({ color: 0x7a4a1e });
+const MAT_LEAVES = new THREE.MeshLambertMaterial({ color: 0x2d6e1a });
+
+for (let i = 0; i < 25; i++) {
+    let tx: number, tz: number;
+    do {
+        tx = (Math.random() - 0.5) * (TERRAIN_SIZE - 10);
+        tz = (Math.random() - 0.5) * (TERRAIN_SIZE - 10);
+    } while (Math.sqrt(tx * tx + tz * tz) < 10);
+
+    const g = new THREE.Group();
+    const trunkH = 2.0 + Math.random() * 1.5;
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, trunkH, 7), MAT_TRUNK);
+    trunk.position.y = trunkH / 2;
+    trunk.castShadow = true;
+    g.add(trunk);
+    // Deux cônes de feuillage empilés
+    const cone1 = new THREE.Mesh(new THREE.ConeGeometry(1.1, 2.4, 7), MAT_LEAVES);
+    cone1.position.y = trunkH + 1.0;
+    cone1.castShadow = true;
+    g.add(cone1);
+    const cone2 = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.8, 7), MAT_LEAVES);
+    cone2.position.y = trunkH + 2.4;
+    cone2.castShadow = true;
+    g.add(cone2);
+
+    const th = sampleHeight(tx, tz, terrainGeo.attributes.position);
+    g.position.set(tx, th, tz);
+    g.rotation.y = Math.random() * Math.PI * 2;
+    scene.add(g);
+    trees.push({ group: g, radius: 0.35 });
+}
+
 const MAT_BARREL = new THREE.MeshLambertMaterial({ color: 0xcc2200 });
 const MAT_BAND    = new THREE.MeshLambertMaterial({ color: 0x111111 });
 
