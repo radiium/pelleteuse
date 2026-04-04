@@ -68,6 +68,18 @@ const glass = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.8, 0.05), MAT_GLASS);
 glass.position.set(-0.45, 1.45, 0.8);
 pivot.add(glass);
 
+const glassBack = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.8, 0.05), MAT_GLASS);
+glassBack.position.set(-0.45, 1.45, -0.225);
+pivot.add(glassBack);
+
+const glassLeft = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.8, 0.9), MAT_GLASS);
+glassLeft.position.set(-0.975, 1.45, 0.3);
+pivot.add(glassLeft);
+
+const glassRight = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.8, 0.9), MAT_GLASS);
+glassRight.position.set(0.075, 1.45, 0.3);
+pivot.add(glassRight);
+
 const flameSpawn = new THREE.Object3D();
 flameSpawn.position.set(-0.45, 1.05 + 1.7 / 2 + 0.1, 0.3);
 pivot.add(flameSpawn);
