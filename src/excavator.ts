@@ -64,19 +64,19 @@ cabin.position.set(-0.45, 1.05, 0.3);
 cabin.castShadow = true;
 pivot.add(cabin);
 
-const glass = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.8, 0.05), MAT_GLASS);
+const glass = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.65, 0.05), MAT_GLASS);
 glass.position.set(-0.45, 1.45, 0.8);
 pivot.add(glass);
 
-const glassBack = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.8, 0.05), MAT_GLASS);
+const glassBack = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.65, 0.05), MAT_GLASS);
 glassBack.position.set(-0.45, 1.45, -0.225);
 pivot.add(glassBack);
 
-const glassLeft = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.8, 0.9), MAT_GLASS);
+const glassLeft = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.65, 0.8), MAT_GLASS);
 glassLeft.position.set(-0.975, 1.45, 0.3);
 pivot.add(glassLeft);
 
-const glassRight = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.8, 0.9), MAT_GLASS);
+const glassRight = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.65, 0.8), MAT_GLASS);
 glassRight.position.set(0.075, 1.45, 0.3);
 pivot.add(glassRight);
 
