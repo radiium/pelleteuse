@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { scene } from './scene';
 import { sampleHeight, TERRAIN_SIZE, terrainGeo } from './terrain';
 import { explodeBarrel, explodeRock } from './particles';
+import { soundCrack, soundExplosion, soundRock } from './sounds';
 import { BARREL_COUNT, ROCK_COUNT, TREE_COUNT } from './config';
 
 // ── Interface commune ─────────────────────────────────────────────────────────
@@ -52,6 +53,7 @@ class Rock implements Collidable {
     onCollide(_excavatorPos: THREE.Vector3, _dt: number): void {
         this.mesh.parent?.remove(this.mesh);
         explodeRock(this.mesh.position, this.radius);
+        soundRock();
         this._alive = false;
     }
 
@@ -87,6 +89,7 @@ class Barrel implements Collidable {
     onCollide(_excavatorPos: THREE.Vector3, _dt: number): void {
         this.obj.parent?.remove(this.obj);
         explodeBarrel(this.obj.position);
+        soundExplosion();
         this._alive = false;
     }
 
@@ -130,7 +133,8 @@ class Tree implements Collidable {
     }
 
     onCollide(excavatorPos: THREE.Vector3, _dt: number): void {
-        if (this._fallAxis !== null) return; // déjà en train de tomber
+        if (this._fallAxis !== null) return;
+        soundCrack();
         const dx = excavatorPos.x - this.group.position.x;
         const dz = excavatorPos.z - this.group.position.z;
         const fallDir = new THREE.Vector3(-dx, 0, -dz).normalize();

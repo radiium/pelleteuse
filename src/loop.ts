@@ -7,7 +7,7 @@ import { sampleHeight, terrainGeo } from './terrain';
 import { spawnDust, spawnFlame, updateAllParticles } from './particles';
 import { checkCollisions } from './world';
 import { ARM_SPEED, SPEED, TURN } from './config';
-import { startHorn, stopHorn } from './horn';
+import { soundJump, soundLand, playHorn, startFlame, stopFlame, updateMotor } from './sounds';
 import { updateCharacters } from './characters';
 
 const timer = new THREE.Timer();
@@ -21,9 +21,16 @@ controls.enabled = false;
 const _camLookAt  = new THREE.Vector3();
 const _prevExcPos = new THREE.Vector3();
 
-// ── Timers ──
-let _dustTimer  = 0;
-let _flameTimer = 0;
+// ── Saut ──
+const JUMP_FORCE   = 9;
+const JUMP_GRAVITY = 24;
+let _velY     = 0;
+let _onGround = true;
+
+// ── Timers / état son ──
+let _dustTimer      = 0;
+let _flameTimer     = 0;
+let _hornWasActive  = false;
 const _dustPosL = new THREE.Vector3();
 const _dustPosR = new THREE.Vector3();
 
@@ -47,11 +54,30 @@ function update(dt: number): void {
     const dir = new THREE.Vector3(Math.sin(heading), 0, Math.cos(heading));
     excavator.group.position.addScaledVector(dir, fwd * SPEED * dt);
 
-    // Coller au terrain
+    // Terrain + saut
     const pos = terrainGeo.attributes.position;
-    const ex = excavator.group.position;
-    const h  = sampleHeight(ex.x, ex.z, pos);
-    ex.y = h;
+    const ex  = excavator.group.position;
+    const h   = sampleHeight(ex.x, ex.z, pos);
+
+    const jumpPressed = keys['Space'] || (gp?.buttons[2]?.pressed ?? false);
+    if (_onGround && jumpPressed) {
+        _velY     = JUMP_FORCE;
+        _onGround = false;
+        soundJump();
+    }
+
+    if (_onGround) {
+        ex.y = h;
+    } else {
+        _velY -= JUMP_GRAVITY * dt;
+        ex.y  += _velY * dt;
+        if (ex.y <= h) {
+            ex.y      = h;
+            _velY     = 0;
+            _onGround = true;
+            soundLand();
+        }
+    }
 
     // Inclinaison selon la pente du terrain
     const sd = 1.5;
@@ -84,19 +110,25 @@ function update(dt: number): void {
         _dustTimer = 0;
     }
 
-    // ── Klaxon (H / bouton 1) ──
+    // ── Moteur ──
+    updateMotor(Math.min(1, Math.abs(fwd) + Math.abs(rot) * 0.4));
+
+    // ── Klaxon (H / bouton 1) — one-shot par pression ──
     const hornActive = keys['KeyH'] || (gp?.buttons[1]?.pressed ?? false);
-    if (hornActive) startHorn(); else stopHorn();
+    if (hornActive && !_hornWasActive) playHorn();
+    _hornWasActive = hornActive;
 
     // ── Flammes (F / bouton 0) ──
     const fireActive = keys['KeyF'] || (gp?.buttons[0]?.pressed ?? false);
     if (fireActive) {
+        startFlame();
         _flameTimer += dt;
         while (_flameTimer >= 0.03) {
             _flameTimer -= 0.03;
             for (let f = 0; f < 4; f++) spawnFlame(excavator.flameSpawn);
         }
     } else {
+        stopFlame();
         _flameTimer = 0;
     }
 

@@ -3,6 +3,7 @@ import { scene } from './scene';
 import { sampleHeight, TERRAIN_SIZE, terrainGeo } from './terrain';
 import { CHARACTER_COUNT } from './config';
 import { spawnConfetti } from './particles';
+import { soundMonster } from './sounds';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -145,6 +146,7 @@ class Character {
 
     private die(dx: number, dz: number): void {
         this.state = 'dead';
+        soundMonster();
         spawnConfetti(this.group.position.clone().add(new THREE.Vector3(0, 1, 0)));
         const out = new THREE.Vector3(-dx, 0, -dz).normalize();
         this.vel.set(out.x * 6, 11, out.z * 6);
