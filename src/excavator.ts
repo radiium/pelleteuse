@@ -84,7 +84,28 @@ const flameSpawn = new THREE.Object3D();
 flameSpawn.position.set(-0.45, 1.05 + 1.7 / 2 + 0.1, 0.3);
 pivot.add(flameSpawn);
 
-const cw = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.55, 0.9), MAT_DARK);
+// ── Plaque "Merlin" sur le dessus du contrepoids ──────────────────────────────
+
+const _cwCanvas = document.createElement('canvas');
+_cwCanvas.width  = 512;
+_cwCanvas.height = 256;
+const _cwCtx = _cwCanvas.getContext('2d')!;
+_cwCtx.fillStyle = '#222222';
+_cwCtx.fillRect(0, 0, 512, 256);
+_cwCtx.translate(256, 128);
+_cwCtx.rotate(Math.PI);
+_cwCtx.translate(-256, -128);
+_cwCtx.font = 'bold 110px monospace';
+_cwCtx.fillStyle = '#f0c020';
+_cwCtx.textAlign = 'center';
+_cwCtx.textBaseline = 'middle';
+_cwCtx.fillText('Merlin', 256, 138);
+
+const _cwTexture = new THREE.CanvasTexture(_cwCanvas);
+// Face +Y (index 2) = dessus du contrepoids
+const _cwMats: THREE.Material[] = [MAT_DARK, MAT_DARK, new THREE.MeshLambertMaterial({ map: _cwTexture }), MAT_DARK, MAT_DARK, MAT_DARK];
+
+const cw = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.55, 0.9), _cwMats);
 cw.position.set(0, 0.65, -0.9);
 pivot.add(cw);
 
