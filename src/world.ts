@@ -55,6 +55,7 @@ class Rock implements Collidable {
         explodeRock(this.mesh.position, this.radius);
         soundRock();
         this._alive = false;
+        _rocksDestroyed++;
     }
 
     update(_dt: number): void {}
@@ -91,6 +92,7 @@ class Barrel implements Collidable {
         explodeBarrel(this.obj.position);
         soundExplosion();
         this._alive = false;
+        _barrelsDestroyed++;
     }
 
     update(_dt: number): void {}
@@ -135,6 +137,7 @@ class Tree implements Collidable {
     onCollide(excavatorPos: THREE.Vector3, _dt: number): void {
         if (this._fallAxis !== null) return;
         soundCrack();
+        _treesDestroyed++;
         const dx = excavatorPos.x - this.group.position.x;
         const dz = excavatorPos.z - this.group.position.z;
         const fallDir = new THREE.Vector3(-dx, 0, -dz).normalize();
@@ -152,6 +155,16 @@ class Tree implements Collidable {
             this._fallAxis = null;
         }
     }
+}
+
+// ── Compteurs de destruction ───────────────────────────────────────────────────
+
+let _rocksDestroyed   = 0;
+let _barrelsDestroyed = 0;
+let _treesDestroyed   = 0;
+
+export function getDestroyedCounts() {
+    return { rocks: _rocksDestroyed, barrels: _barrelsDestroyed, trees: _treesDestroyed };
 }
 
 // ── Entités + collisions ──────────────────────────────────────────────────────

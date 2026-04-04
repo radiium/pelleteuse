@@ -146,6 +146,7 @@ class Character {
 
     private die(dx: number, dz: number): void {
         this.state = 'dead';
+        _monstersDestroyed++;
         soundMonster();
         spawnConfetti(this.group.position.clone().add(new THREE.Vector3(0, 1, 0)));
         const out = new THREE.Vector3(-dx, 0, -dz).normalize();
@@ -182,6 +183,11 @@ function randomPos(minDist: number): [number, number] {
     } while (Math.sqrt(x * x + z * z) < minDist);
     return [x, z];
 }
+
+// ── Compteur de monstres ──────────────────────────────────────────────────────
+
+let _monstersDestroyed = 0;
+export function getDestroyedMonsters() { return _monstersDestroyed; }
 
 // ── Instances + API publique ──────────────────────────────────────────────────
 

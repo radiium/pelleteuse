@@ -8,9 +8,12 @@ import { spawnDust, spawnFlame, updateAllParticles } from './particles';
 import { checkCollisions } from './world';
 import { ARM_SPEED, SPEED, TURN } from './config';
 import { soundJump, soundLand, playHorn, startFlame, stopFlame, updateMotor } from './sounds';
-import { updateCharacters } from './characters';
+import { updateCharacters, getDestroyedMonsters } from './characters';
+import { getDestroyedCounts } from './world';
 
 const timer = new THREE.Timer();
+const _hudCounters = document.getElementById('hud-counters')!;
+let _prevTrees = -1, _prevBarrels = -1, _prevRocks = -1, _prevMonsters = -1;
 
 let heading = 0;
 const slopeQuat = new THREE.Quaternion();
@@ -147,6 +150,18 @@ function update(dt: number): void {
 
     updateAllParticles(dt);
     updateCharacters(dt, excavator.group.position);
+
+    // ── HUD compteurs ──
+    const { trees, barrels, rocks } = getDestroyedCounts();
+    const monsters = getDestroyedMonsters();
+    if (trees !== _prevTrees || barrels !== _prevBarrels || rocks !== _prevRocks || monsters !== _prevMonsters) {
+        _prevTrees = trees; _prevBarrels = barrels; _prevRocks = rocks; _prevMonsters = monsters;
+        _hudCounters.innerHTML =
+            `<div class="score"><span class="icon">🌲</span><span class="value">${trees}</span></div>` +
+            `<div class="score"><span class="icon">🛢️</span><span class="value">${barrels}</span></div>` +
+            `<div class="score"><span class="icon">🪨</span><span class="value">${rocks}</span></div>` +
+            `<div class="score"><span class="icon">👾</span><span class="value">${monsters}</span></div>`;
+    }
 
     // ── Bras ──
     const boomUp =

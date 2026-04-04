@@ -11,10 +11,15 @@ body {
 canvas {
     display: block;
 }
-#ui {
+#left-panel {
     position: fixed;
     top: 16px;
     left: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+#ui {
     color: #e0d8c0;
     font-size: 12px;
     line-height: 1.8;
@@ -47,9 +52,6 @@ canvas {
     color: #f0c060;
 }
 #gamepad-indicator {
-    position: fixed;
-    top: 16px;
-    right: 16px;
     color: #e0d8c0;
     font-size: 12px;
     background: rgba(0, 0, 0, 0.45);
@@ -57,4 +59,34 @@ canvas {
     border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     pointer-events: none;
+}
+#hud-counters {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    color: #e0d8c0;
+    font-size: 14px;
+    line-height: 2.1;
+    background: rgba(0, 0, 0, 0.45);
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    pointer-events: none;
+    text-align: right;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+#hud-counters .score {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+#hud-counters .icon {
+    font-size: 22px;
+    line-height: 1;
+    vertical-align: middle;
+}
+#hud-counters .value {
+    font-size: 16px;
 }
