@@ -7,6 +7,7 @@ import { sampleHeight, terrainGeo } from './terrain';
 import { spawnDust, spawnFlame, updateAllParticles } from './particles';
 import { checkCollisions } from './world';
 import { ARM_SPEED, SPEED, TURN } from './config';
+import { startHorn, stopHorn } from './horn';
 
 const timer = new THREE.Timer();
 
@@ -81,6 +82,10 @@ function update(dt: number): void {
     } else {
         _dustTimer = 0;
     }
+
+    // ── Klaxon (H / bouton 1) ──
+    const hornActive = keys['KeyH'] || (gp?.buttons[1]?.pressed ?? false);
+    if (hornActive) startHorn(); else stopHorn();
 
     // ── Flammes (F / bouton 0) ──
     const fireActive = keys['KeyF'] || (gp?.buttons[0]?.pressed ?? false);
