@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { scene } from './scene';
-import { sampleHeight, TERRAIN_SIZE, terrainGeo } from './terrain';
+import { randomPos, sampleHeight, terrainGeo } from './terrain';
 import { explodeBarrel, explodeRock } from './particles';
 import { soundCrack, soundExplosion, soundRock } from './sounds';
 import { BARREL_COUNT, ROCK_COUNT, TREE_COUNT } from './config';
@@ -18,15 +18,6 @@ interface Collidable {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const _posAttr = terrainGeo.attributes.position;
-
-function randomPos(minDist: number): [number, number] {
-    let x: number, z: number;
-    do {
-        x = (Math.random() - 0.5) * (TERRAIN_SIZE - 10);
-        z = (Math.random() - 0.5) * (TERRAIN_SIZE - 10);
-    } while (Math.sqrt(x * x + z * z) < minDist);
-    return [x, z];
-}
 
 // ── Rock ──────────────────────────────────────────────────────────────────────
 

@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { scene } from './scene';
-import { sampleHeight, TERRAIN_SIZE, terrainGeo } from './terrain';
+import { randomPos, sampleHeight, TERRAIN_SIZE, terrainGeo } from './terrain';
 import { CHARACTER_COUNT } from './config';
 import { spawnConfetti } from './particles';
 import { soundMonster } from './sounds';
+
+const _posAttr = terrainGeo.attributes.position;
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -92,9 +94,8 @@ class Character {
         this.group.add(this.legR);
 
         // Position initiale : hors de la zone de départ
-        const [x, z] = randomPos(12);
-        const posAttr = terrainGeo.attributes.position;
-        this.group.position.set(x, sampleHeight(x, z, posAttr), z);
+        const [x, z] = randomPos(12, 15);
+        this.group.position.set(x, sampleHeight(x, z, _posAttr), z);
         this.group.rotation.y = this.heading;
         scene.add(this.group);
     }
@@ -133,8 +134,7 @@ class Character {
         if (nx < -half || nx > half) { this.heading = Math.PI - this.heading; nx = THREE.MathUtils.clamp(nx, -half, half); }
         if (nz < -half || nz > half) { this.heading = -this.heading;          nz = THREE.MathUtils.clamp(nz, -half, half); }
 
-        const posAttr = terrainGeo.attributes.position;
-        this.group.position.set(nx, sampleHeight(nx, nz, posAttr), nz);
+        this.group.position.set(nx, sampleHeight(nx, nz, _posAttr), nz);
         this.group.rotation.y = this.heading;
 
         // Animation jambes + bob
@@ -171,17 +171,6 @@ class Character {
 
         if (this.deadAge >= 1.2) scene.remove(this.group);
     }
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function randomPos(minDist: number): [number, number] {
-    let x: number, z: number;
-    do {
-        x = (Math.random() - 0.5) * (TERRAIN_SIZE - 15);
-        z = (Math.random() - 0.5) * (TERRAIN_SIZE - 15);
-    } while (Math.sqrt(x * x + z * z) < minDist);
-    return [x, z];
 }
 
 // ── Compteur de monstres ──────────────────────────────────────────────────────

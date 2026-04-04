@@ -197,9 +197,8 @@ export function spawnConfetti(pos: THREE.Vector3): void {
     }
 }
 
+const _allPools = [fragmentPool, flamePool, dustPool, confettiPool];
+
 export function updateAllParticles(dt: number): void {
-    fragmentPool.update(dt);
-    flamePool.update(dt);
-    dustPool.update(dt);
-    confettiPool.update(dt);
+    for (const pool of _allPools) pool.update(dt);
 }

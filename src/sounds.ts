@@ -39,7 +39,7 @@ async function _loadMotor(): Promise<void> {
 
 // inputMag : 0 (arrêt) → 1 (pleine vitesse)
 export function updateMotor(inputMag: number): void {
-    if (!_motorCtx)  { void _loadMotor(); return; }
+    if (!_motorCtx) { if (inputMag > 0.01) void _loadMotor(); return; }
     if (_motorCtx.state === 'suspended') void _motorCtx.resume();
     if (!_motorReady || !_motorSource || !_motorGain) return;
     const t     = _motorCtx.currentTime;
@@ -85,33 +85,22 @@ function pac(): AudioContext {
     return _procCtx;
 }
 
-export function soundJump(): void {
+function playTone(type: OscillatorType, freqStart: number, freqEnd: number, gainStart: number, duration: number): void {
     const ctx = pac();
     const t   = ctx.currentTime;
     const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(140, t);
-    osc.frequency.exponentialRampToValueAtTime(520, t + 0.18);
+    osc.type  = type;
+    osc.frequency.setValueAtTime(freqStart, t);
+    osc.frequency.exponentialRampToValueAtTime(freqEnd, t + duration);
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.3, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+    gain.gain.setValueAtTime(gainStart, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
     osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(t); osc.stop(t + 0.22);
+    osc.start(t); osc.stop(t + duration);
 }
 
-export function soundLand(): void {
-    const ctx = pac();
-    const t   = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(90, t);
-    osc.frequency.exponentialRampToValueAtTime(35, t + 0.15);
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.45, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(t); osc.stop(t + 0.18);
-}
+export function soundJump(): void { playTone('sine', 140, 520, 0.30, 0.22); }
+export function soundLand(): void { playTone('sine',  90,  35, 0.45, 0.18); }
 
 export function soundMonster(): void {
     const ctx = pac();

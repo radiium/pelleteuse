@@ -73,3 +73,12 @@ function buildTerrain() {
 }
 
 export const terrainGeo = buildTerrain();
+
+export function randomPos(minDist: number, margin = 10): [number, number] {
+    let x: number, z: number;
+    do {
+        x = (Math.random() - 0.5) * (TERRAIN_SIZE - margin);
+        z = (Math.random() - 0.5) * (TERRAIN_SIZE - margin);
+    } while (Math.sqrt(x * x + z * z) < minDist);
+    return [x, z];
+}
