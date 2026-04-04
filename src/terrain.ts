@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { scene } from './scene';
 
-export const TERRAIN_SIZE = 80;
-const TERRAIN_SEGS = 40;
+export const TERRAIN_SIZE = 180;
+const TERRAIN_SEGS = 70;
 
 export function sampleHeight(
     x: number,
@@ -42,7 +42,13 @@ function buildTerrain() {
             Math.cos(z * 0.18) * 1.0 +
             Math.sin(x * 0.4 + z * 0.3) * 0.6 +
             (Math.random() - 0.5) * 0.8;
-        pos.setY(i, Math.max(0, h));
+
+        // Collines naturelles aux bords — montée quadratique à partir de 78%
+        const borderFactor = Math.max(Math.abs(x), Math.abs(z)) / (TERRAIN_SIZE / 2);
+        const border       = Math.max(0, (borderFactor - 0.78) / 0.22);
+        const borderH      = border * border * 18;
+
+        pos.setY(i, Math.max(0, h) + borderH);
     }
     geo.computeVertexNormals();
 

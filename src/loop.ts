@@ -3,7 +3,7 @@ import { excavator } from './excavator';
 import { deadzone, getGamepad, keys } from './input';
 import './lights';
 import { camera, controls, renderer, scene } from './scene';
-import { sampleHeight, terrainGeo } from './terrain';
+import { sampleHeight, terrainGeo, TERRAIN_SIZE } from './terrain';
 import { spawnDust, spawnFlame, updateAllParticles } from './particles';
 import { checkCollisions } from './world';
 import { ARM_SPEED, SPEED, TURN } from './config';
@@ -50,13 +50,26 @@ function update(dt: number): void {
         (keys['KeyQ'] || keys['ArrowLeft']  ? 1 : 0) -
         (keys['KeyD'] || keys['ArrowRight'] ? 1 : 0) - gpLX;
 
+    // Freinage progressif vers les bords
+    const ex        = excavator.group.position;
+    const half      = TERRAIN_SIZE / 2;
+    const dist      = Math.sqrt(ex.x * ex.x + ex.z * ex.z);
+    const slowStart = half * 0.78;
+    const slowEnd   = half * 0.93;
+    // Produit scalaire direction / vecteur radial sortant : >0 = vers le bord, <0 = vers le centre
+    const outwardDot = dist > 0
+        ? Math.sin(heading) * (ex.x / dist) + Math.cos(heading) * (ex.z / dist)
+        : 0;
+    const speedMult = dist > slowStart && outwardDot > 0
+        ? Math.max(0.08, 1 - (dist - slowStart) / (slowEnd - slowStart) * 0.92)
+        : 1.0;
+
     heading += rot * TURN * dt;
     const dir = new THREE.Vector3(Math.sin(heading), 0, Math.cos(heading));
-    excavator.group.position.addScaledVector(dir, fwd * SPEED * dt);
+    excavator.group.position.addScaledVector(dir, fwd * SPEED * speedMult * dt);
 
     // Terrain + saut
     const pos = terrainGeo.attributes.position;
-    const ex  = excavator.group.position;
     const h   = sampleHeight(ex.x, ex.z, pos);
 
     const jumpPressed = keys['Space'] || (gp?.buttons[2]?.pressed ?? false);
