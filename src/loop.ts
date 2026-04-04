@@ -8,6 +8,7 @@ import { spawnDust, spawnFlame, updateAllParticles } from './particles';
 import { checkCollisions } from './world';
 import { ARM_SPEED, SPEED, TURN } from './config';
 import { startHorn, stopHorn } from './horn';
+import { updateCharacters } from './characters';
 
 const timer = new THREE.Timer();
 
@@ -100,6 +101,7 @@ function update(dt: number): void {
     }
 
     updateAllParticles(dt);
+    updateCharacters(dt, excavator.group.position);
 
     // ── Bras ──
     const boomUp =

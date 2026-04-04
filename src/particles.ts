@@ -102,6 +102,20 @@ const dustPool = new ParticlePool({
     gravity: 0, xzDamping: 0.96, scaleCurve: 'inflate',
 });
 
+const _confettiGeo = new THREE.BoxGeometry(0.18, 0.06, 0.12);
+const confettiPool = new ParticlePool({
+    geo: _confettiGeo,
+    mats: [
+        new THREE.MeshBasicMaterial({ color: 0xff3366 }),
+        new THREE.MeshBasicMaterial({ color: 0xffcc00 }),
+        new THREE.MeshBasicMaterial({ color: 0x33ccff }),
+        new THREE.MeshBasicMaterial({ color: 0x66ff33 }),
+        new THREE.MeshBasicMaterial({ color: 0xff6600 }),
+        new THREE.MeshBasicMaterial({ color: 0xcc33ff }),
+    ],
+    gravity: 7, xzDamping: 0.97, scaleCurve: 'linear',
+});
+
 // ── API publique ──────────────────────────────────────────────────────────────
 
 export function explodeRock(position: THREE.Vector3, radius: number): void {
@@ -169,8 +183,23 @@ export function spawnDust(pos: THREE.Vector3): void {
     );
 }
 
+export function spawnConfetti(pos: THREE.Vector3): void {
+    for (let i = 0; i < 28; i++) {
+        const theta = Math.random() * Math.PI * 2;
+        const speed = 3 + Math.random() * 5;
+        confettiPool.spawn(
+            pos,
+            new THREE.Vector3(Math.cos(theta) * speed, 5 + Math.random() * 6, Math.sin(theta) * speed),
+            1.0,
+            1.2 + Math.random() * 0.6,
+            new THREE.Vector3((Math.random() - 0.5) * 16, (Math.random() - 0.5) * 16, (Math.random() - 0.5) * 16)
+        );
+    }
+}
+
 export function updateAllParticles(dt: number): void {
     fragmentPool.update(dt);
     flamePool.update(dt);
     dustPool.update(dt);
+    confettiPool.update(dt);
 }
