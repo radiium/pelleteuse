@@ -19,7 +19,6 @@ export const controls = new OrbitControls(camera, renderer.domElement);
 controls.mouseButtons = { RIGHT: THREE.MOUSE.ROTATE };
 controls.enablePan = false;
 controls.minDistance = 6;
-// controls.maxDistance = 6;
 controls.maxDistance = 60;
 controls.maxPolarAngle = Math.PI / 2.2;
 
