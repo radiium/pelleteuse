@@ -2,10 +2,10 @@ import * as THREE from 'three';
 import { scene } from './scene';
 
 const MAT_YELLOW = new THREE.MeshLambertMaterial({ color: 0xf0c020 });
-const MAT_DARK   = new THREE.MeshLambertMaterial({ color: 0x222222 });
-const MAT_CABIN  = new THREE.MeshLambertMaterial({ color: 0xe8b818 });
-const MAT_GLASS  = new THREE.MeshLambertMaterial({ color: 0x88ccff, transparent: true, opacity: 0.6 });
-const MAT_ARM    = new THREE.MeshLambertMaterial({ color: 0xd4a812 });
+const MAT_DARK = new THREE.MeshLambertMaterial({ color: 0x222222 });
+const MAT_CABIN = new THREE.MeshLambertMaterial({ color: 0xe8b818 });
+const MAT_GLASS = new THREE.MeshLambertMaterial({ color: 0x88ccff, transparent: true, opacity: 0.6 });
+const MAT_ARM = new THREE.MeshLambertMaterial({ color: 0xd4a812 });
 const MAT_RUBBER = new THREE.MeshLambertMaterial({ color: 0x333333 });
 
 const _root = new THREE.Group();
@@ -35,7 +35,7 @@ function makeChenille(xOff: number) {
 const chenilleL = makeChenille(0);
 const chenilleR = makeChenille(0);
 chenilleL.position.x = -0.85;
-chenilleR.position.x =  0.85;
+chenilleR.position.x = 0.85;
 _root.add(chenilleL);
 _root.add(chenilleR);
 
@@ -87,13 +87,12 @@ pivot.add(flameSpawn);
 // ── Plaque "Merlin" sur le dessus du contrepoids ──────────────────────────────
 
 const _cwCanvas = document.createElement('canvas');
-_cwCanvas.width  = 512;
+_cwCanvas.width = 512;
 _cwCanvas.height = 256;
 const _cwCtx = _cwCanvas.getContext('2d')!;
 _cwCtx.fillStyle = '#222222';
 _cwCtx.fillRect(0, 0, 512, 256);
 _cwCtx.translate(256, 128);
-_cwCtx.rotate(Math.PI);
 _cwCtx.translate(-256, -128);
 _cwCtx.font = 'bold 110px monospace';
 _cwCtx.fillStyle = '#f0c020';
@@ -103,7 +102,14 @@ _cwCtx.fillText('Merlin', 256, 138);
 
 const _cwTexture = new THREE.CanvasTexture(_cwCanvas);
 // Face +Y (index 2) = dessus du contrepoids
-const _cwMats: THREE.Material[] = [MAT_DARK, MAT_DARK, new THREE.MeshLambertMaterial({ map: _cwTexture }), MAT_DARK, MAT_DARK, MAT_DARK];
+const _cwMats: THREE.Material[] = [
+    MAT_DARK,
+    MAT_DARK,
+    MAT_DARK,
+    MAT_DARK,
+    MAT_DARK,
+    new THREE.MeshLambertMaterial({ map: _cwTexture }),
+];
 
 const cw = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.55, 0.9), _cwMats);
 cw.position.set(0, 0.65, -0.9);
@@ -148,14 +154,16 @@ godet.position.set(BW / 2, 0, 0);
 godet.castShadow = true;
 godetPivot.add(godet);
 
-boomPivot.rotation.x  = -1.2;
-stickPivot.rotation.x =  1.4;
-godetPivot.rotation.x =  0.8;
+boomPivot.rotation.x = -1.2;
+stickPivot.rotation.x = 1.4;
+godetPivot.rotation.x = 0.8;
 
 // ── API ───────────────────────────────────────────────────────────────────────
 
 function animateTracks(wheelSpin: number): void {
-    wheels.forEach((w) => { w.rotation.x += wheelSpin; });
+    wheels.forEach((w) => {
+        w.rotation.x += wheelSpin;
+    });
 }
 
 export const excavator = {
@@ -167,5 +175,5 @@ export const excavator = {
     flameSpawn,
     dustSpawnL,
     dustSpawnR,
-    animateTracks,
+    animateTracks
 };
