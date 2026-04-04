@@ -2,14 +2,21 @@ import * as THREE from 'three';
 import { scene } from './scene';
 import { sampleHeight, TERRAIN_SIZE, terrainGeo } from './terrain';
 import { explodeBarrel, explodeRock } from './particles';
+import { BARREL_COUNT, ROCK_COUNT, TREE_COUNT } from './config';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ── Interface commune ─────────────────────────────────────────────────────────
 
-export interface RockObj   { mesh: THREE.Mesh;    radius: number }
-export interface BarrelObj { obj: THREE.Object3D; radius: number }
-export interface TreeObj   { group: THREE.Group;  radius: number }
+interface Collidable {
+    readonly position: THREE.Vector3;
+    readonly radius:   number;
+    readonly isAlive:  boolean;
+    onCollide(excavatorPos: THREE.Vector3, dt: number): void;
+    update(dt: number): void;
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+const _posAttr = terrainGeo.attributes.position;
 
 function randomPos(minDist: number): [number, number] {
     let x: number, z: number;
@@ -20,130 +27,148 @@ function randomPos(minDist: number): [number, number] {
     return [x, z];
 }
 
-// ── Rochers ───────────────────────────────────────────────────────────────────
+// ── Rock ──────────────────────────────────────────────────────────────────────
 
-export const rocks: RockObj[] = [];
+class Rock implements Collidable {
+    readonly mesh:   THREE.Mesh;
+    readonly radius: number;
+    private _alive = true;
 
-for (let i = 0; i < 20; i++) {
-    const r = 0.3 + Math.random() * 0.9;
-    const geo = new THREE.DodecahedronGeometry(r, 0);
-    geo.rotateY(Math.random() * Math.PI);
-    const mat = new THREE.MeshLambertMaterial({ color: 0x7a7060 });
-    const rock = new THREE.Mesh(geo, mat);
-    rock.castShadow = true;
-    const [rx, rz] = randomPos(5);
-    rock.position.set(rx, sampleHeight(rx, rz, terrainGeo.attributes.position) + r * 0.5, rz);
-    scene.add(rock);
-    rocks.push({ mesh: rock, radius: r });
+    get position() { return this.mesh.position; }
+    get isAlive()  { return this._alive; }
+
+    constructor() {
+        const r = 0.3 + Math.random() * 0.9;
+        this.radius = r;
+        const geo = new THREE.DodecahedronGeometry(r, 0);
+        geo.rotateY(Math.random() * Math.PI);
+        this.mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0x7a7060 }));
+        this.mesh.castShadow = true;
+        const [x, z] = randomPos(5);
+        this.mesh.position.set(x, sampleHeight(x, z, _posAttr) + r * 0.5, z);
+        scene.add(this.mesh);
+    }
+
+    onCollide(_excavatorPos: THREE.Vector3, _dt: number): void {
+        this.mesh.parent?.remove(this.mesh);
+        explodeRock(this.mesh.position, this.radius);
+        this._alive = false;
+    }
+
+    update(_dt: number): void {}
 }
 
-// ── Barils ────────────────────────────────────────────────────────────────────
-
-export const barrels: BarrelObj[] = [];
+// ── Barrel ────────────────────────────────────────────────────────────────────
 
 const MAT_BARREL = new THREE.MeshLambertMaterial({ color: 0xcc2200 });
 const MAT_BAND   = new THREE.MeshLambertMaterial({ color: 0x111111 });
 
-for (let i = 0; i < 10; i++) {
-    const [bx, bz] = randomPos(10);
-    const g = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.75, 10), MAT_BARREL);
-    body.castShadow = true;
-    g.add(body);
-    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.30, 0.10, 10), MAT_BAND);
-    band.position.y = 0.12;
-    g.add(band);
-    const bh = sampleHeight(bx, bz, terrainGeo.attributes.position);
-    g.position.set(bx, bh + 0.375, bz);
-    scene.add(g);
-    barrels.push({ obj: g, radius: 0.32 });
+class Barrel implements Collidable {
+    readonly obj:    THREE.Group;
+    readonly radius = 0.32;
+    private _alive  = true;
+
+    get position() { return this.obj.position; }
+    get isAlive()  { return this._alive; }
+
+    constructor() {
+        this.obj = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.75, 10), MAT_BARREL);
+        body.castShadow = true;
+        this.obj.add(body);
+        const band = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.30, 0.10, 10), MAT_BAND);
+        band.position.y = 0.12;
+        this.obj.add(band);
+        const [x, z] = randomPos(10);
+        this.obj.position.set(x, sampleHeight(x, z, _posAttr) + 0.375, z);
+        scene.add(this.obj);
+    }
+
+    onCollide(_excavatorPos: THREE.Vector3, _dt: number): void {
+        this.obj.parent?.remove(this.obj);
+        explodeBarrel(this.obj.position);
+        this._alive = false;
+    }
+
+    update(_dt: number): void {}
 }
 
-// ── Arbres ────────────────────────────────────────────────────────────────────
-
-export const trees: TreeObj[] = [];
+// ── Tree ──────────────────────────────────────────────────────────────────────
 
 const MAT_TRUNK  = new THREE.MeshLambertMaterial({ color: 0x7a4a1e });
 const MAT_LEAVES = new THREE.MeshLambertMaterial({ color: 0x2d6e1a });
+const _worldUp   = new THREE.Vector3(0, 1, 0);
 
-for (let i = 0; i < 25; i++) {
-    const [tx, tz] = randomPos(10);
-    const g = new THREE.Group();
-    const trunkH = 2.0 + Math.random() * 1.5;
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, trunkH, 7), MAT_TRUNK);
-    trunk.position.y = trunkH / 2;
-    trunk.castShadow = true;
-    g.add(trunk);
-    const cone1 = new THREE.Mesh(new THREE.ConeGeometry(1.1, 2.4, 7), MAT_LEAVES);
-    cone1.position.y = trunkH + 1.0;
-    cone1.castShadow = true;
-    g.add(cone1);
-    const cone2 = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.8, 7), MAT_LEAVES);
-    cone2.position.y = trunkH + 2.4;
-    cone2.castShadow = true;
-    g.add(cone2);
-    const th = sampleHeight(tx, tz, terrainGeo.attributes.position);
-    g.position.set(tx, th, tz);
-    g.rotation.y = Math.random() * Math.PI * 2;
-    scene.add(g);
-    trees.push({ group: g, radius: 0.35 });
-}
+class Tree implements Collidable {
+    readonly group:  THREE.Group;
+    readonly radius = 0.45; // 0.35 + 0.1 marge absorbée
+    private _fallAxis:  THREE.Vector3 | null = null;
+    private _fallAngle = 0;
 
-// ── Arbres qui tombent ────────────────────────────────────────────────────────
+    get position() { return this.group.position; }
+    get isAlive()  { return !(this._fallAxis === null && this._fallAngle > 0); }
 
-interface FallingTree { group: THREE.Group; fallAxis: THREE.Vector3; angle: number }
-const fallingTrees: FallingTree[] = [];
-const _worldUp = new THREE.Vector3(0, 1, 0);
+    constructor() {
+        this.group = new THREE.Group();
+        const trunkH = 2.0 + Math.random() * 1.5;
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, trunkH, 7), MAT_TRUNK);
+        trunk.position.y = trunkH / 2;
+        trunk.castShadow = true;
+        this.group.add(trunk);
+        const cone1 = new THREE.Mesh(new THREE.ConeGeometry(1.1, 2.4, 7), MAT_LEAVES);
+        cone1.position.y = trunkH + 1.0;
+        cone1.castShadow = true;
+        this.group.add(cone1);
+        const cone2 = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.8, 7), MAT_LEAVES);
+        cone2.position.y = trunkH + 2.4;
+        cone2.castShadow = true;
+        this.group.add(cone2);
+        const [x, z] = randomPos(10);
+        this.group.position.set(x, sampleHeight(x, z, _posAttr), z);
+        this.group.rotation.y = Math.random() * Math.PI * 2;
+        scene.add(this.group);
+    }
 
-function updateFallingTrees(dt: number): void {
-    for (let i = fallingTrees.length - 1; i >= 0; i--) {
-        const t = fallingTrees[i];
+    onCollide(excavatorPos: THREE.Vector3, _dt: number): void {
+        if (this._fallAxis !== null) return; // déjà en train de tomber
+        const dx = excavatorPos.x - this.group.position.x;
+        const dz = excavatorPos.z - this.group.position.z;
+        const fallDir = new THREE.Vector3(-dx, 0, -dz).normalize();
+        this._fallAxis = new THREE.Vector3().crossVectors(_worldUp, fallDir).normalize();
+        this._fallAngle = 0.001; // > 0 pour activer isAlive tracking
+    }
+
+    update(dt: number): void {
+        if (this._fallAxis === null) return;
         const delta = 2.0 * dt;
-        t.angle += delta;
-        t.group.rotateOnWorldAxis(t.fallAxis, delta);
-        if (t.angle >= Math.PI / 2) {
-            scene.remove(t.group);
-            fallingTrees.splice(i, 1);
+        this._fallAngle += delta;
+        this.group.rotateOnWorldAxis(this._fallAxis, delta);
+        if (this._fallAngle >= Math.PI / 2) {
+            this.group.parent?.remove(this.group);
+            this._fallAxis = null;
         }
     }
 }
 
-// ── Collisions ────────────────────────────────────────────────────────────────
+// ── Entités + collisions ──────────────────────────────────────────────────────
+
+const entities: Collidable[] = [];
+
+for (let i = 0; i < ROCK_COUNT;   i++) entities.push(new Rock());
+for (let i = 0; i < BARREL_COUNT; i++) entities.push(new Barrel());
+for (let i = 0; i < TREE_COUNT;   i++) entities.push(new Tree());
 
 export function checkCollisions(excavatorPos: THREE.Vector3, dt: number): void {
-    for (let i = rocks.length - 1; i >= 0; i--) {
-        const rock = rocks[i];
-        const dx = excavatorPos.x - rock.mesh.position.x;
-        const dz = excavatorPos.z - rock.mesh.position.z;
-        if (dx * dx + dz * dz < (rock.radius + 1.2) ** 2) {
-            scene.remove(rock.mesh);
-            explodeRock(rock.mesh.position, rock.radius);
-            rocks.splice(i, 1);
+    for (let i = entities.length - 1; i >= 0; i--) {
+        const e = entities[i];
+        e.update(dt);
+
+        if (!e.isAlive) { entities.splice(i, 1); continue; }
+
+        const dx = excavatorPos.x - e.position.x;
+        const dz = excavatorPos.z - e.position.z;
+        if (dx * dx + dz * dz < (e.radius + 1.2) ** 2) {
+            e.onCollide(excavatorPos, dt);
         }
     }
-
-    for (let i = barrels.length - 1; i >= 0; i--) {
-        const b = barrels[i];
-        const dx = excavatorPos.x - b.obj.position.x;
-        const dz = excavatorPos.z - b.obj.position.z;
-        if (dx * dx + dz * dz < (b.radius + 1.2) ** 2) {
-            scene.remove(b.obj);
-            explodeBarrel(b.obj.position);
-            barrels.splice(i, 1);
-        }
-    }
-
-    for (let i = trees.length - 1; i >= 0; i--) {
-        const tree = trees[i];
-        const dx = excavatorPos.x - tree.group.position.x;
-        const dz = excavatorPos.z - tree.group.position.z;
-        if (dx * dx + dz * dz < (tree.radius + 1.3) ** 2) {
-            const fallDir = new THREE.Vector3(-dx, 0, -dz).normalize();
-            const fallAxis = new THREE.Vector3().crossVectors(_worldUp, fallDir).normalize();
-            fallingTrees.push({ group: tree.group, fallAxis, angle: 0 });
-            trees.splice(i, 1);
-        }
-    }
-
-    updateFallingTrees(dt);
 }

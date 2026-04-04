@@ -1,29 +1,18 @@
 import * as THREE from 'three';
-import {
-    animateTracks,
-    boomPivot,
-    dustSpawnL,
-    dustSpawnR,
-    excavator,
-    flameSpawn,
-    godetPivot,
-    stickPivot
-} from './excavator';
+import { excavator } from './excavator';
 import { deadzone, getGamepad, keys } from './input';
 import './lights';
 import { camera, controls, renderer, scene } from './scene';
 import { sampleHeight, terrainGeo } from './terrain';
 import { spawnDust, spawnFlame, updateAllParticles } from './particles';
 import { checkCollisions } from './world';
+import { ARM_SPEED, SPEED, TURN } from './config';
 
 const timer = new THREE.Timer();
-const SPEED = 8;
-const TURN = 1.8;
-const ARM_SPEED = 1.2;
 
 let heading = 0;
 const slopeQuat = new THREE.Quaternion();
-const _worldUp = new THREE.Vector3(0, 1, 0);
+const _worldUp  = new THREE.Vector3(0, 1, 0);
 
 // ── Chase cam ──
 controls.enabled = false;
@@ -46,41 +35,46 @@ function update(dt: number): void {
 
     // ── Déplacement ──
     const fwd =
-        (keys['KeyZ'] || keys['ArrowUp'] ? 1 : 0) - (keys['KeyS'] || keys['ArrowDown'] ? 1 : 0) + gpLY;
+        (keys['KeyZ'] || keys['ArrowUp']    ? 1 : 0) -
+        (keys['KeyS'] || keys['ArrowDown']  ? 1 : 0) + gpLY;
     const rot =
-        (keys['KeyQ'] || keys['ArrowLeft'] ? 1 : 0) - (keys['KeyD'] || keys['ArrowRight'] ? 1 : 0) - gpLX;
+        (keys['KeyQ'] || keys['ArrowLeft']  ? 1 : 0) -
+        (keys['KeyD'] || keys['ArrowRight'] ? 1 : 0) - gpLX;
 
     heading += rot * TURN * dt;
     const dir = new THREE.Vector3(Math.sin(heading), 0, Math.cos(heading));
-    excavator.position.addScaledVector(dir, fwd * SPEED * dt);
+    excavator.group.position.addScaledVector(dir, fwd * SPEED * dt);
 
     // Coller au terrain
     const pos = terrainGeo.attributes.position;
-    const h = sampleHeight(excavator.position.x, excavator.position.z, pos);
-    excavator.position.y = h;
+    const ex = excavator.group.position;
+    const h  = sampleHeight(ex.x, ex.z, pos);
+    ex.y = h;
 
     // Inclinaison selon la pente du terrain
     const sd = 1.5;
-    const hR = sampleHeight(excavator.position.x + sd, excavator.position.z, pos);
-    const hF = sampleHeight(excavator.position.x, excavator.position.z + sd, pos);
+    const hR = sampleHeight(ex.x + sd, ex.z, pos);
+    const hF = sampleHeight(ex.x, ex.z + sd, pos);
     const vRight = new THREE.Vector3(sd, hR - h, 0);
-    const vFwd   = new THREE.Vector3(0, hF - h, sd);
-    const terrainNormal = new THREE.Vector3().crossVectors(vFwd, vRight).normalize();
+    const vFwd   = new THREE.Vector3(0,  hF - h, sd);
+    const terrainNormal   = new THREE.Vector3().crossVectors(vFwd, vRight).normalize();
     const targetSlopeQuat = new THREE.Quaternion().setFromUnitVectors(_worldUp, terrainNormal);
     slopeQuat.slerp(targetSlopeQuat, 1 - Math.exp(-5 * dt));
-    excavator.quaternion.copy(slopeQuat).multiply(new THREE.Quaternion().setFromAxisAngle(_worldUp, heading));
+    excavator.group.quaternion
+        .copy(slopeQuat)
+        .multiply(new THREE.Quaternion().setFromAxisAngle(_worldUp, heading));
 
-    animateTracks(fwd * SPEED * dt * 0.5);
+    excavator.animateTracks(fwd * SPEED * dt * 0.5);
 
-    checkCollisions(excavator.position, dt);
+    checkCollisions(excavator.group.position, dt);
 
     // ── Poussière chenilles ──
     if (Math.abs(fwd) > 0.05 || Math.abs(rot) > 0.05) {
         _dustTimer += dt;
         while (_dustTimer >= 0.06) {
             _dustTimer -= 0.06;
-            dustSpawnL.getWorldPosition(_dustPosL);
-            dustSpawnR.getWorldPosition(_dustPosR);
+            excavator.dustSpawnL.getWorldPosition(_dustPosL);
+            excavator.dustSpawnR.getWorldPosition(_dustPosR);
             spawnDust(_dustPosL);
             spawnDust(_dustPosR);
         }
@@ -94,7 +88,7 @@ function update(dt: number): void {
         _flameTimer += dt;
         while (_flameTimer >= 0.03) {
             _flameTimer -= 0.03;
-            for (let f = 0; f < 4; f++) spawnFlame(flameSpawn);
+            for (let f = 0; f < 4; f++) spawnFlame(excavator.flameSpawn);
         }
     } else {
         _flameTimer = 0;
@@ -104,26 +98,28 @@ function update(dt: number): void {
 
     // ── Bras ──
     const boomUp =
-        (keys['KeyI'] ? 1 : 0) -
-        (keys['KeyK'] ? 1 : 0) +
+        (keys['KeyI'] ? 1 : 0) - (keys['KeyK'] ? 1 : 0) +
         (gp ? (gp.buttons[12]?.pressed ? 1 : gp.buttons[13]?.pressed ? -1 : 0) : 0);
     const stickExt = (keys['KeyJ'] ? 1 : 0) - (keys['KeyL'] ? 1 : 0) - gpRX;
     const godetRot = (keys['KeyU'] ? 1 : 0) - (keys['KeyO'] ? 1 : 0) - gpRY;
 
-    boomPivot.rotation.x  = THREE.MathUtils.clamp(boomPivot.rotation.x  - boomUp   * ARM_SPEED * dt, -1.2,  0.3);
-    stickPivot.rotation.x = THREE.MathUtils.clamp(stickPivot.rotation.x + stickExt * ARM_SPEED * dt,  0,    1.4);
-    godetPivot.rotation.x = THREE.MathUtils.clamp(godetPivot.rotation.x + godetRot * ARM_SPEED * dt, -1.0,  0.8);
+    excavator.boomPivot.rotation.x  = THREE.MathUtils.clamp(excavator.boomPivot.rotation.x  - boomUp   * ARM_SPEED * dt, -1.2,  0.3);
+    excavator.stickPivot.rotation.x = THREE.MathUtils.clamp(excavator.stickPivot.rotation.x + stickExt * ARM_SPEED * dt,  0,    1.4);
+    excavator.godetPivot.rotation.x = THREE.MathUtils.clamp(excavator.godetPivot.rotation.x + godetRot * ARM_SPEED * dt, -1.0,  0.8);
 
     // ── Chase cam ──
-    camera.position.add(excavator.position.clone().sub(_prevExcPos));
-    _prevExcPos.copy(excavator.position);
+    camera.position.add(excavator.group.position.clone().sub(_prevExcPos));
+    _prevExcPos.copy(excavator.group.position);
     if (Math.abs(fwd) > 0.05 || Math.abs(rot) > 0.05) {
-        const desired = excavator.position.clone().add(
+        const desired = excavator.group.position.clone().add(
             new THREE.Vector3(0, 7, -20).applyAxisAngle(_worldUp, heading)
         );
         camera.position.lerp(desired, 1 - Math.exp(-1.5 * dt));
     }
-    _camLookAt.lerp(excavator.position.clone().add(new THREE.Vector3(0, 1.5, 0)), 1 - Math.exp(-8 * dt));
+    _camLookAt.lerp(
+        excavator.group.position.clone().add(new THREE.Vector3(0, 1.5, 0)),
+        1 - Math.exp(-8 * dt)
+    );
     camera.lookAt(_camLookAt);
 }
 
