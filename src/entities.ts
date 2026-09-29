@@ -1,27 +1,32 @@
 import * as THREE from 'three';
 import { scene } from './scene';
-import { randomPos, sampleHeight, terrainGeo } from './terrain';
+import { randomPos, sampleHeight } from './terrain';
 import { explodeBarrel, explodeRock } from './particles';
-import { soundCrack, soundExplosion, soundRock } from './sounds';
-import { BARREL_COUNT, ROCK_COUNT, TREE_COUNT } from './config';
-import { disposeObject } from './utils';
+import { playExplosion, playRockBreak, playTreeCrack } from './sounds';
+import { disposeObject, UP } from './utils';
+import { score } from './score';
+import { Character } from './characters';
+
+const ROCK_COUNT      = 55;
+const BARREL_COUNT    = 25;
+const TREE_COUNT      = 65;
+const CHARACTER_COUNT = 12;
+const EXCAVATOR_RADIUS = 1.2; // rayon de collision de la pelleteuse
 
 // ── Interface commune ─────────────────────────────────────────────────────────
 
-interface Collidable {
+export interface Collidable {
     readonly object:   THREE.Object3D;
     readonly position: THREE.Vector3;
     readonly radius:   number;
-    readonly isAlive:  boolean;
-    onCollide(excavatorPos: THREE.Vector3, dt: number): void;
-    update(dt: number): void;
+    readonly isAlive:  boolean; // false → retirée du monde et libérée
+    onCollide(excavatorPos: THREE.Vector3): void;
+    update?(dt: number, excavatorPos: THREE.Vector3): void;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-const _posAttr = terrainGeo.attributes.position;
-
 // ── Rock ──────────────────────────────────────────────────────────────────────
+
+const MAT_ROCK = new THREE.MeshLambertMaterial({ color: 0x7a7060 });
 
 class Rock implements Collidable {
     readonly mesh:   THREE.Mesh;
@@ -37,22 +42,19 @@ class Rock implements Collidable {
         this.radius = r;
         const geo = new THREE.DodecahedronGeometry(r, 0);
         geo.rotateY(Math.random() * Math.PI);
-        this.mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0x7a7060 }));
+        this.mesh = new THREE.Mesh(geo, MAT_ROCK);
         this.mesh.castShadow = true;
         const [x, z] = randomPos(5);
-        this.mesh.position.set(x, sampleHeight(x, z, _posAttr) + r * 0.5, z);
+        this.mesh.position.set(x, sampleHeight(x, z) + r * 0.5, z);
         scene.add(this.mesh);
     }
 
-    onCollide(_excavatorPos: THREE.Vector3, _dt: number): void {
-        this.mesh.parent?.remove(this.mesh);
+    onCollide(): void {
         explodeRock(this.mesh.position, this.radius);
-        soundRock();
+        playRockBreak();
         this._alive = false;
-        _rocksDestroyed++;
+        score.rocks++;
     }
-
-    update(_dt: number): void {}
 }
 
 // ── Barrel ────────────────────────────────────────────────────────────────────
@@ -78,36 +80,39 @@ class Barrel implements Collidable {
         band.position.y = 0.12;
         this.obj.add(band);
         const [x, z] = randomPos(10);
-        this.obj.position.set(x, sampleHeight(x, z, _posAttr) + 0.375, z);
+        this.obj.position.set(x, sampleHeight(x, z) + 0.375, z);
         scene.add(this.obj);
     }
 
-    onCollide(_excavatorPos: THREE.Vector3, _dt: number): void {
-        this.obj.parent?.remove(this.obj);
+    onCollide(): void {
         explodeBarrel(this.obj.position);
-        soundExplosion();
+        playExplosion();
         this._alive = false;
-        _barrelsDestroyed++;
+        score.barrels++;
     }
-
-    update(_dt: number): void {}
 }
 
 // ── Tree ──────────────────────────────────────────────────────────────────────
 
 const MAT_TRUNK  = new THREE.MeshLambertMaterial({ color: 0x7a4a1e });
 const MAT_LEAVES = new THREE.MeshLambertMaterial({ color: 0x2d6e1a });
-const _worldUp   = new THREE.Vector3(0, 1, 0);
+
+const TREE_FALL_SPEED = 2.0; // rad/s
+const TREE_SINK_DELAY = 0.5; // s couché au sol avant de s'enfoncer
+const TREE_SINK_TIME  = 1.0; // s pour disparaître sous le sol
+const TREE_SINK_DEPTH = 1.8; // assez pour enfouir le feuillage couché
 
 class Tree implements Collidable {
     readonly group:  THREE.Group;
-    readonly radius = 0.45; // 0.35 + 0.1 marge absorbée
-    private _fallAxis:  THREE.Vector3 | null = null;
+    readonly radius = 0.45;
+    private _state: 'standing' | 'falling' | 'sinking' | 'gone' = 'standing';
+    private readonly _fallAxis = new THREE.Vector3();
     private _fallAngle = 0;
+    private _sinkAge   = 0;
 
     get object()   { return this.group; }
     get position() { return this.group.position; }
-    get isAlive()  { return !(this._fallAxis === null && this._fallAngle > 0); }
+    get isAlive()  { return this._state !== 'gone'; }
 
     constructor() {
         this.group = new THREE.Group();
@@ -125,42 +130,39 @@ class Tree implements Collidable {
         cone2.castShadow = true;
         this.group.add(cone2);
         const [x, z] = randomPos(10);
-        this.group.position.set(x, sampleHeight(x, z, _posAttr), z);
+        this.group.position.set(x, sampleHeight(x, z), z);
         this.group.rotation.y = Math.random() * Math.PI * 2;
         scene.add(this.group);
     }
 
-    onCollide(excavatorPos: THREE.Vector3, _dt: number): void {
-        if (this._fallAxis !== null) return;
-        soundCrack();
-        _treesDestroyed++;
-        const dx = excavatorPos.x - this.group.position.x;
-        const dz = excavatorPos.z - this.group.position.z;
-        const fallDir = new THREE.Vector3(-dx, 0, -dz).normalize();
-        this._fallAxis = new THREE.Vector3().crossVectors(_worldUp, fallDir).normalize();
-        this._fallAngle = 0.001; // > 0 pour activer isAlive tracking
+    onCollide(excavatorPos: THREE.Vector3): void {
+        if (this._state !== 'standing') return;
+        this._state = 'falling';
+        playTreeCrack();
+        score.trees++;
+        // Tombe dans la direction opposée à la pelleteuse
+        const fallDir = new THREE.Vector3(
+            this.group.position.x - excavatorPos.x, 0, this.group.position.z - excavatorPos.z,
+        ).normalize();
+        this._fallAxis.crossVectors(UP, fallDir).normalize();
     }
 
     update(dt: number): void {
-        if (this._fallAxis === null) return;
-        const delta = 2.0 * dt;
-        this._fallAngle += delta;
-        this.group.rotateOnWorldAxis(this._fallAxis, delta);
-        if (this._fallAngle >= Math.PI / 2) {
-            this.group.parent?.remove(this.group);
-            this._fallAxis = null;
+        if (this._state === 'falling') {
+            // Borné pour finir exactement à plat
+            const delta = Math.min(TREE_FALL_SPEED * dt, Math.PI / 2 - this._fallAngle);
+            this._fallAngle += delta;
+            this.group.rotateOnWorldAxis(this._fallAxis, delta);
+            if (this._fallAngle >= Math.PI / 2) this._state = 'sinking';
+        } else if (this._state === 'sinking') {
+            // Reste couché un instant, puis s'enfonce doucement dans le sol
+            this._sinkAge += dt;
+            if (this._sinkAge > TREE_SINK_DELAY) {
+                this.group.position.y -= (TREE_SINK_DEPTH / TREE_SINK_TIME) * dt;
+            }
+            if (this._sinkAge >= TREE_SINK_DELAY + TREE_SINK_TIME) this._state = 'gone';
         }
     }
-}
-
-// ── Compteurs de destruction ───────────────────────────────────────────────────
-
-let _rocksDestroyed   = 0;
-let _barrelsDestroyed = 0;
-let _treesDestroyed   = 0;
-
-export function getDestroyedCounts() {
-    return { rocks: _rocksDestroyed, barrels: _barrelsDestroyed, trees: _treesDestroyed };
 }
 
 // ── Entités + collisions ──────────────────────────────────────────────────────
@@ -168,31 +170,36 @@ export function getDestroyedCounts() {
 const entities: Collidable[] = [];
 
 function spawnEntities(): void {
-    for (let i = 0; i < ROCK_COUNT;   i++) entities.push(new Rock());
-    for (let i = 0; i < BARREL_COUNT; i++) entities.push(new Barrel());
-    for (let i = 0; i < TREE_COUNT;   i++) entities.push(new Tree());
+    for (let i = 0; i < ROCK_COUNT;      i++) entities.push(new Rock());
+    for (let i = 0; i < BARREL_COUNT;    i++) entities.push(new Barrel());
+    for (let i = 0; i < TREE_COUNT;      i++) entities.push(new Tree());
+    for (let i = 0; i < CHARACTER_COUNT; i++) entities.push(new Character());
 }
 spawnEntities();
 
-// Nouvelle partie : repeuple le terrain et remet les compteurs à zéro
-export function resetWorld(): void {
+// Nouvelle partie : repeuple le terrain (objets + monstres)
+export function resetEntities(): void {
     for (const e of entities) disposeObject(e.object);
     entities.length = 0;
-    _rocksDestroyed = _barrelsDestroyed = _treesDestroyed = 0;
     spawnEntities();
 }
 
-export function checkCollisions(excavatorPos: THREE.Vector3, dt: number): void {
+// Anime les entités et résout les collisions avec la pelleteuse
+export function updateEntities(dt: number, excavatorPos: THREE.Vector3): void {
     for (let i = entities.length - 1; i >= 0; i--) {
         const e = entities[i];
-        e.update(dt);
-
-        if (!e.isAlive) { entities.splice(i, 1); continue; }
+        e.update?.(dt, excavatorPos);
 
         const dx = excavatorPos.x - e.position.x;
         const dz = excavatorPos.z - e.position.z;
-        if (dx * dx + dz * dz < (e.radius + 1.2) ** 2) {
-            e.onCollide(excavatorPos, dt);
+        if (e.isAlive && dx * dx + dz * dz < (e.radius + EXCAVATOR_RADIUS) ** 2) {
+            e.onCollide(excavatorPos);
+        }
+
+        // Détruite, arbre enfoui ou monstre envolé : retirée de la scène et libérée
+        if (!e.isAlive) {
+            disposeObject(e.object);
+            entities.splice(i, 1);
         }
     }
 }

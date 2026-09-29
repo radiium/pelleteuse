@@ -1,28 +1,29 @@
 import * as THREE from 'three';
 import { scene } from './scene';
-import { randomPos, sampleHeight, TERRAIN_SIZE, terrainGeo } from './terrain';
-import { CHARACTER_COUNT } from './config';
+import { randomPos, sampleHeight, TERRAIN_SIZE } from './terrain';
 import { spawnConfetti } from './particles';
-import { soundMonster } from './sounds';
-import { disposeObject } from './utils';
-
-const _posAttr = terrainGeo.attributes.position;
+import { playMonster } from './sounds';
+import { score } from './score';
+import type { Collidable } from './entities';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
 const FLEE_DIST    = 6;
-const HIT_DIST     = 1.8;
 const WANDER_SPEED = 1.5;
 const FLEE_SPEED   = 4.5;
 
-const COLORS = [0x27ae60, 0x8e44ad, 0xc0392b, 0x16a085, 0xd35400, 0x2980b9];
+const BODY_MATS = [0x27ae60, 0x8e44ad, 0xc0392b, 0x16a085, 0xd35400, 0x2980b9]
+    .map((color) => new THREE.MeshLambertMaterial({ color }));
+const MAT_WHITE = new THREE.MeshBasicMaterial({ color: 0xffffff });
+const MAT_BLACK = new THREE.MeshBasicMaterial({ color: 0x111111 });
 
-// ── Classe Character ──────────────────────────────────────────────────────────
+// ── Monstre : erre, fuit la pelleteuse, s'envole quand il est écrasé ──────────
 
 type State = 'wandering' | 'fleeing' | 'dead';
 
-class Character {
-    readonly group: THREE.Group;
+export class Character implements Collidable {
+    readonly group:  THREE.Group;
+    readonly radius = 0.6;
     private legL:    THREE.Mesh;
     private legR:    THREE.Mesh;
     private state:   State   = 'wandering';
@@ -32,16 +33,14 @@ class Character {
     private deadAge:  number = 0;
     private vel = new THREE.Vector3();
 
-    get isAlive(): boolean { return !(this.state === 'dead' && this.deadAge >= 1.2); }
-    get position(): THREE.Vector3 { return this.group.position; }
+    get object()   { return this.group; }
+    get position() { return this.group.position; }
+    get isAlive()  { return !(this.state === 'dead' && this.deadAge >= 1.2); }
 
     constructor() {
         this.group = new THREE.Group();
 
-        const color   = COLORS[Math.floor(Math.random() * COLORS.length)];
-        const matBody  = new THREE.MeshLambertMaterial({ color });
-        const matWhite = new THREE.MeshBasicMaterial({ color: 0xffffff });
-        const matBlack = new THREE.MeshBasicMaterial({ color: 0x111111 });
+        const matBody = BODY_MATS[Math.floor(Math.random() * BODY_MATS.length)];
 
         // Corps (trapu)
         const body = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.55), matBody);
@@ -59,10 +58,10 @@ class Character {
         const eyeGeo   = new THREE.SphereGeometry(0.11, 6, 4);
         const pupilGeo = new THREE.SphereGeometry(0.06, 5, 3);
         [-1, 1].forEach((side) => {
-            const eye = new THREE.Mesh(eyeGeo, matWhite);
+            const eye = new THREE.Mesh(eyeGeo, MAT_WHITE);
             eye.position.set(side * 0.16, 1.85, 0.31);
             this.group.add(eye);
-            const pupil = new THREE.Mesh(pupilGeo, matBlack);
+            const pupil = new THREE.Mesh(pupilGeo, MAT_BLACK);
             pupil.position.set(side * 0.16, 1.85, 0.37);
             this.group.add(pupil);
         });
@@ -96,7 +95,7 @@ class Character {
 
         // Position initiale : hors de la zone de départ
         const [x, z] = randomPos(12, 15);
-        this.group.position.set(x, sampleHeight(x, z, _posAttr), z);
+        this.group.position.set(x, sampleHeight(x, z), z);
         this.group.rotation.y = this.heading;
         scene.add(this.group);
     }
@@ -107,9 +106,6 @@ class Character {
         const dx   = excavatorPos.x - this.group.position.x;
         const dz   = excavatorPos.z - this.group.position.z;
         const dist = Math.sqrt(dx * dx + dz * dz);
-
-        // Écrasé
-        if (dist < HIT_DIST) { this.die(dx, dz); return; }
 
         // Transitions d'état
         if (dist < FLEE_DIST) {
@@ -132,10 +128,11 @@ class Character {
 
         // Rebond sur les bords
         const half = TERRAIN_SIZE / 2 - 3;
-        if (nx < -half || nx > half) { this.heading = Math.PI - this.heading; nx = THREE.MathUtils.clamp(nx, -half, half); }
-        if (nz < -half || nz > half) { this.heading = -this.heading;          nz = THREE.MathUtils.clamp(nz, -half, half); }
+        // x = sin(heading), z = cos(heading) : inverser x → -h, inverser z → π - h
+        if (nx < -half || nx > half) { this.heading = -this.heading;          nx = THREE.MathUtils.clamp(nx, -half, half); }
+        if (nz < -half || nz > half) { this.heading = Math.PI - this.heading; nz = THREE.MathUtils.clamp(nz, -half, half); }
 
-        this.group.position.set(nx, sampleHeight(nx, nz, _posAttr), nz);
+        this.group.position.set(nx, sampleHeight(nx, nz), nz);
         this.group.rotation.y = this.heading;
 
         // Animation jambes + bob
@@ -145,12 +142,16 @@ class Character {
         this.group.position.y += Math.abs(Math.sin(this.legPhase)) * 0.04;
     }
 
-    private die(dx: number, dz: number): void {
+    // Écrasé
+    onCollide(excavatorPos: THREE.Vector3): void {
+        if (this.state === 'dead') return;
         this.state = 'dead';
-        _monstersDestroyed++;
-        soundMonster();
+        score.monsters++;
+        playMonster();
         spawnConfetti(this.group.position.clone().add(new THREE.Vector3(0, 1, 0)));
-        const out = new THREE.Vector3(-dx, 0, -dz).normalize();
+        const out = new THREE.Vector3(
+            this.group.position.x - excavatorPos.x, 0, this.group.position.z - excavatorPos.z,
+        ).normalize();
         this.vel.set(out.x * 6, 11, out.z * 6);
     }
 
@@ -169,35 +170,5 @@ class Character {
             this.group.rotation.x += 8 * dt;
             this.group.rotation.z += 5 * dt;
         }
-
-        if (this.deadAge >= 1.2) scene.remove(this.group);
-    }
-}
-
-// ── Compteur de monstres ──────────────────────────────────────────────────────
-
-let _monstersDestroyed = 0;
-export function getDestroyedMonsters() { return _monstersDestroyed; }
-
-// ── Instances + API publique ──────────────────────────────────────────────────
-
-const characters: Character[] = [];
-function spawnCharacters(): void {
-    for (let i = 0; i < CHARACTER_COUNT; i++) characters.push(new Character());
-}
-spawnCharacters();
-
-// Nouvelle partie : remplace tous les monstres et remet le compteur à zéro
-export function resetCharacters(): void {
-    for (const c of characters) disposeObject(c.group);
-    characters.length = 0;
-    _monstersDestroyed = 0;
-    spawnCharacters();
-}
-
-export function updateCharacters(dt: number, excavatorPos: THREE.Vector3): void {
-    for (let i = characters.length - 1; i >= 0; i--) {
-        characters[i].update(dt, excavatorPos);
-        if (!characters[i].isAlive) characters.splice(i, 1);
     }
 }

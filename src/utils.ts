@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 
+export const UP = new THREE.Vector3(0, 1, 0);
+
 /** Retire un objet de la scène et libère ses géométries (les matériaux partagés sont conservés). */
 export function disposeObject(obj: THREE.Object3D): void {
     obj.parent?.remove(obj);

@@ -44,12 +44,13 @@ class ParticlePool {
 
     update(dt: number): void {
         const { gravity, xzDamping, scaleCurve } = this.cfg;
+        const damp = Math.pow(xzDamping, dt * 60); // xzDamping est calibré pour 60 fps
         for (let i = this.pool.length - 1; i >= 0; i--) {
             const p = this.pool[i];
             p.age += dt;
             if (gravity > 0) p.vel.y -= gravity * dt;
-            p.vel.x *= xzDamping;
-            p.vel.z *= xzDamping;
+            p.vel.x *= damp;
+            p.vel.z *= damp;
             p.mesh.position.addScaledVector(p.vel, dt);
             if (p.angVel) {
                 p.mesh.rotation.x += p.angVel.x * dt;
@@ -66,6 +67,11 @@ class ParticlePool {
                 this.pool.splice(i, 1);
             }
         }
+    }
+
+    clear(): void {
+        for (const p of this.pool) scene.remove(p.mesh);
+        this.pool.length = 0;
     }
 }
 
@@ -201,4 +207,8 @@ const _allPools = [fragmentPool, flamePool, dustPool, confettiPool];
 
 export function updateAllParticles(dt: number): void {
     for (const pool of _allPools) pool.update(dt);
+}
+
+export function clearParticles(): void {
+    for (const pool of _allPools) pool.clear();
 }

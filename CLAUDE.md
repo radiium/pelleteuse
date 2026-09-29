@@ -19,6 +19,6 @@ pnpm preview    # Serve the production build locally
 
 ## Architecture
 
-Early-stage project. `src/main.ts` is the entry point loaded by `index.html` into `<div id="app">`. Three.js scene setup, rendering loops, and any game/simulation logic will live under `src/`.
+Early-stage project. `src/main.ts` is the entry point loaded by `index.html`; the renderer canvas is appended to `<body>`. Three.js scene setup, rendering loops, and any game/simulation logic will live under `src/`.
 
 Module resolution is set to `bundler` (Vite handles all imports). Output targets ES2023 with no `tsc` emit — Vite handles transpilation and bundling.

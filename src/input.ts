@@ -1,7 +1,7 @@
-import { t } from './i18n';
-import type { I18nKey } from './i18n';
+// Indices des boutons manette (mapping « standard » de la Gamepad API)
+export const PAD = { A: 0, B: 1, X: 2, START: 9, UP: 12, DOWN: 13 } as const;
 
-export const keys: Record<string, boolean> = {};
+const keys: Record<string, boolean> = {};
 
 window.addEventListener('keydown', (e) => {
     keys[e.code] = true;
@@ -9,6 +9,10 @@ window.addEventListener('keydown', (e) => {
 });
 window.addEventListener('keyup', (e) => {
     keys[e.code] = false;
+});
+// Fenêtre quittée touche enfoncée (Alt-Tab…) : le keyup n'arrivera jamais
+window.addEventListener('blur', () => {
+    for (const k in keys) keys[k] = false;
 });
 
 // ── Périphérique utilisé en dernier : l'UI affiche touches clavier ou boutons manette ──
@@ -31,52 +35,10 @@ export function pollInputDevice(): void {
     }
 }
 
-// ── Notification de connexion manette ─────────────────────────────────────────
-
-const _toast = document.getElementById('toast')!;
-let _toastTimer = 0;
-
-function showToast(key: I18nKey): void {
-    _toast.textContent = t(key);
-    _toast.classList.add('show');
-    clearTimeout(_toastTimer);
-    _toastTimer = window.setTimeout(() => _toast.classList.remove('show'), 2500);
-}
-
-window.addEventListener('gamepadconnected', () => {
-    showToast('gamepad.connected');
-    setDevice('gamepad');
-});
+window.addEventListener('gamepadconnected', () => setDevice('gamepad'));
 window.addEventListener('gamepaddisconnected', () => {
-    showToast('gamepad.disconnected');
     if (!getGamepad()) setDevice('keyboard');
 });
-
-// ── Libellés des touches ──────────────────────────────────────────────────────
-// Les contrôles utilisent des positions physiques (e.code) : KeyW = Z en AZERTY, W en QWERTY.
-// On affiche la lettre réellement gravée sur le clavier du joueur : <kbd data-keycode="KeyW">
-
-const AZERTY: Record<string, string> = { KeyW: 'Z', KeyA: 'Q' };
-
-async function labelKeys(): Promise<void> {
-    let layout: Map<string, string> | null = null;
-    try {
-        // Keyboard API (Chromium uniquement)
-        const kb = (navigator as Navigator & { keyboard?: { getLayoutMap(): Promise<Map<string, string>> } }).keyboard;
-        layout = kb ? await kb.getLayoutMap() : null;
-    } catch { /* API refusée (iframe…) */ }
-    // Sans l'API : on suppose AZERTY pour un navigateur en français
-    const guessAzerty = navigator.language.startsWith('fr');
-
-    for (const el of document.querySelectorAll<HTMLElement>('[data-keycode]')) {
-        const code = el.dataset.keycode!;
-        const label = layout?.get(code)
-            ?? (guessAzerty ? AZERTY[code] : undefined)
-            ?? code.replace(/^Key/, '');
-        el.textContent = label.toUpperCase();
-    }
-}
-void labelKeys();
 
 export function getGamepad(): Gamepad | null {
     const gps = navigator.getGamepads();
@@ -84,8 +46,13 @@ export function getGamepad(): Gamepad | null {
     return null;
 }
 
-export function deadzone(v: number, dz = 0.12): number {
+function deadzone(v: number, dz = 0.12): number {
     return Math.abs(v) < dz ? 0 : v;
+}
+
+// Clavier + manette s'additionnent : on borne chaque axe à [-1, 1]
+function axis(v: number): number {
+    return Math.max(-1, Math.min(1, v));
 }
 
 export interface Inputs {
@@ -99,25 +66,34 @@ export interface Inputs {
     godetRot: number;
 }
 
+// A sert aussi à valider le menu : en sortant du menu il est encore enfoncé,
+// on ignore donc les flammes manette jusqu'à ce qu'il soit relâché
+let _ignorePadFire = false;
+export function ignorePadFireUntilRelease(): void {
+    _ignorePadFire = true;
+}
+
 export function readInputs(): Inputs {
     const gp = getGamepad();
+    const padFire = gp?.buttons[PAD.A]?.pressed ?? false;
+    if (!padFire) _ignorePadFire = false;
     const gpLX = gp ? deadzone(gp.axes[0]) : 0;
     const gpLY = gp ? deadzone(gp.axes[1]) : 0;
     const gpRX = gp ? deadzone(gp.axes[2]) : 0;
     const gpRY = gp ? deadzone(gp.axes[3]) : 0;
 
     return {
-        fwd: (keys['KeyW'] || keys['ArrowUp'] ? 1 : 0) - (keys['KeyS'] || keys['ArrowDown'] ? 1 : 0) - gpLY,
-        rot:
-            (keys['KeyA'] || keys['ArrowLeft'] ? 1 : 0) - (keys['KeyD'] || keys['ArrowRight'] ? 1 : 0) - gpLX,
-        jump: !!(keys['Space'] || (gp?.buttons[2]?.pressed ?? false)),
-        horn: !!(keys['KeyH'] || (gp?.buttons[1]?.pressed ?? false)),
-        fire: !!(keys['KeyF'] || (gp?.buttons[0]?.pressed ?? false)),
-        boomUp:
+        fwd: axis((keys['KeyW'] || keys['ArrowUp'] ? 1 : 0) - (keys['KeyS'] || keys['ArrowDown'] ? 1 : 0) - gpLY),
+        rot: axis(
+            (keys['KeyA'] || keys['ArrowLeft'] ? 1 : 0) - (keys['KeyD'] || keys['ArrowRight'] ? 1 : 0) - gpLX),
+        jump: !!(keys['Space'] || (gp?.buttons[PAD.X]?.pressed ?? false)),
+        horn: !!(keys['KeyH'] || (gp?.buttons[PAD.B]?.pressed ?? false)),
+        fire: !!(keys['KeyF'] || (padFire && !_ignorePadFire)),
+        boomUp: axis(
             (keys['KeyI'] ? 1 : 0) -
             (keys['KeyK'] ? 1 : 0) +
-            (gp ? (gp.buttons[12]?.pressed ? 1 : gp.buttons[13]?.pressed ? -1 : 0) : 0),
-        stickExt: (keys['KeyJ'] ? 1 : 0) - (keys['KeyL'] ? 1 : 0) - gpRX,
-        godetRot: (keys['KeyU'] ? 1 : 0) - (keys['KeyO'] ? 1 : 0) - gpRY
+            (gp ? (gp.buttons[PAD.UP]?.pressed ? 1 : gp.buttons[PAD.DOWN]?.pressed ? -1 : 0) : 0)),
+        stickExt: axis((keys['KeyJ'] ? 1 : 0) - (keys['KeyL'] ? 1 : 0) - gpRX),
+        godetRot: axis((keys['KeyU'] ? 1 : 0) - (keys['KeyO'] ? 1 : 0) - gpRY)
     };
 }

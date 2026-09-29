@@ -32,12 +32,8 @@ function makeChenille(xOff: number) {
     return g;
 }
 
-const chenilleL = makeChenille(0);
-const chenilleR = makeChenille(0);
-chenilleL.position.x = -0.85;
-chenilleR.position.x = 0.85;
-_root.add(chenilleL);
-_root.add(chenilleR);
+_root.add(makeChenille(-0.85));
+_root.add(makeChenille(0.85));
 
 // Points d'émission de poussière
 const dustSpawnL = new THREE.Object3D();
@@ -92,8 +88,6 @@ _cwCanvas.height = 256;
 const _cwCtx = _cwCanvas.getContext('2d')!;
 _cwCtx.fillStyle = '#222222';
 _cwCtx.fillRect(0, 0, 512, 256);
-_cwCtx.translate(256, 128);
-_cwCtx.translate(-256, -128);
 _cwCtx.font = 'bold 110px monospace';
 _cwCtx.fillStyle = '#f0c020';
 _cwCtx.textAlign = 'center';
@@ -154,9 +148,28 @@ godet.position.set(BW / 2, 0, 0);
 godet.castShadow = true;
 godetPivot.add(godet);
 
-boomPivot.rotation.x = -1.2;
-stickPivot.rotation.x = 1.4;
-godetPivot.rotation.x = 0.8;
+// ── Bras : pose de repos et butées (radians, rotation.x des pivots) ─────────────
+
+const ARM = [
+    { pivot: boomPivot,  rest: -1.2, min: -1.2, max: 0.3 },
+    { pivot: stickPivot, rest:  1.4, min:  0,   max: 1.4 },
+    { pivot: godetPivot, rest:  0.8, min: -1.0, max: 0.8 },
+];
+
+/** Remet le bras en pose de repos. */
+function resetArm(): void {
+    for (const j of ARM) j.pivot.rotation.x = j.rest;
+}
+
+/** Fait pivoter flèche, avant-bras et godet (deltas en radians), dans les butées. */
+function moveArm(boom: number, stick: number, godet: number): void {
+    [boom, stick, godet].forEach((delta, i) => {
+        const j = ARM[i];
+        j.pivot.rotation.x = THREE.MathUtils.clamp(j.pivot.rotation.x + delta, j.min, j.max);
+    });
+}
+
+resetArm();
 
 // ── API ───────────────────────────────────────────────────────────────────────
 
@@ -168,12 +181,10 @@ function animateTracks(wheelSpin: number): void {
 
 export const excavator = {
     group: _root,
-    pivot,
-    boomPivot,
-    stickPivot,
-    godetPivot,
     flameSpawn,
     dustSpawnL,
     dustSpawnR,
-    animateTracks
+    animateTracks,
+    moveArm,
+    resetArm,
 };
