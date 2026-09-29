@@ -25,6 +25,8 @@ const _restart = document.getElementById('btn-restart')!;
 const _home    = document.getElementById('btn-home')!;
 const _hint    = document.getElementById('menu-hint')!;
 
+document.getElementById('menu-version')!.textContent = `v${__APP_VERSION__} · ${__GIT_HASH__}`;
+
 // Sélecteur de langue
 const _langBtns = LANGS.map((lang) => {
     const btn = document.createElement('button');

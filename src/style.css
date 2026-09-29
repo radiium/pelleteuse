@@ -264,6 +264,15 @@ kbd {
     border-color: #f0c060;
 }
 
+#menu-version {
+    position: absolute;
+    right: 12px;
+    bottom: 8px;
+    font-size: 11px;
+    color: #e0d8c0;
+    opacity: 0.5;
+}
+
 /* HUD masqué pendant le menu */
 body.menu-open #hud-counters,
 body.menu-open #menu-hint {
