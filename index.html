@@ -7,31 +7,53 @@
         <title>pelleteuse</title>
     </head>
     <body>
-        <div id="left-panel">
-            <div id="gamepad-indicator">🎮 Manette : non détectée</div>
-            <details id="ui">
-                <summary>Contrôles</summary>
-                <b>DÉPLACEMENT</b><br />
-                Z / ↑ &nbsp; Avancer<br />
-                S / ↓ &nbsp; Reculer<br />
-                Q / ← &nbsp; Tourner gauche<br />
-                D / → &nbsp; Tourner droite<br />
-                <br />
-                <b>BRAS</b><br />
-                I / K &nbsp; Flèche haut / bas<br />
-                J / L &nbsp; Avant-bras étendre / replier<br />
-                U / O &nbsp; Godet haut / bas<br />
-                <br />
-                <b>ACTIONS</b><br />
-                Espace &nbsp; Sauter<br />
-                F &nbsp; Flammes<br />
-                H &nbsp; Klaxon<br />
-                <br />
-                <b>CAMÉRA</b><br />
-                Chase cam automatique
-            </details>
-        </div>
+        <button id="menu-hint">
+            <span class="kb-only"><kbd data-i18n="key.escape"></kbd></span>
+            <span class="gp-only"><kbd>Start</kbd></span>
+            <span data-i18n="controls.menu"></span>
+        </button>
         <div id="hud-counters"></div>
+        <div id="toast"></div>
+
+        <div id="menu">
+            <h1 data-i18n="title"></h1>
+            <p id="menu-sub"></p>
+            <div id="menu-card">
+                <div id="menu-controls">
+                    <section>
+                        <h2 data-i18n="controls.move"></h2>
+                        <dl>
+                            <dt><span class="kb-only"><kbd data-keycode="KeyW">Z</kbd><kbd data-keycode="KeyS">S</kbd></span><span class="gp-only"><kbd><span data-i18n="pad.stickL"></span> ↕</kbd></span></dt><dd data-i18n="action.fwdBack"></dd>
+                            <dt><span class="kb-only"><kbd data-keycode="KeyA">Q</kbd><kbd data-keycode="KeyD">D</kbd></span><span class="gp-only"><kbd><span data-i18n="pad.stickL"></span> ↔</kbd></span></dt><dd data-i18n="action.turn"></dd>
+                            <dt><span class="kb-only"><kbd data-i18n="key.space"></kbd></span><span class="gp-only"><kbd>X</kbd></span></dt><dd data-i18n="action.jump"></dd>
+                        </dl>
+                    </section>
+                    <section>
+                        <h2 data-i18n="controls.arm"></h2>
+                        <dl>
+                            <dt><span class="kb-only"><kbd data-keycode="KeyI">I</kbd><kbd data-keycode="KeyK">K</kbd></span><span class="gp-only"><kbd><span data-i18n="pad.dpad"></span> ↕</kbd></span></dt><dd data-i18n="action.boom"></dd>
+                            <dt><span class="kb-only"><kbd data-keycode="KeyJ">J</kbd><kbd data-keycode="KeyL">L</kbd></span><span class="gp-only"><kbd><span data-i18n="pad.stickR"></span> ↔</kbd></span></dt><dd data-i18n="action.stick"></dd>
+                            <dt><span class="kb-only"><kbd data-keycode="KeyU">U</kbd><kbd data-keycode="KeyO">O</kbd></span><span class="gp-only"><kbd><span data-i18n="pad.stickR"></span> ↕</kbd></span></dt><dd data-i18n="action.bucket"></dd>
+                        </dl>
+                    </section>
+                    <section>
+                        <h2 data-i18n="controls.actions"></h2>
+                        <dl>
+                            <dt><span class="kb-only"><kbd data-keycode="KeyF">F</kbd></span><span class="gp-only"><kbd>A</kbd></span></dt><dd data-i18n="action.flames"></dd>
+                            <dt><span class="kb-only"><kbd data-keycode="KeyH">H</kbd></span><span class="gp-only"><kbd>B</kbd></span></dt><dd data-i18n="action.horn"></dd>
+                            <dt><span class="kb-only"><kbd data-i18n="key.escape"></kbd></span><span class="gp-only"><kbd>Start</kbd></span></dt><dd data-i18n="action.pause"></dd>
+                        </dl>
+                    </section>
+                </div>
+                <div id="menu-actions">
+                    <button id="btn-play" class="btn-primary"></button>
+                    <button id="btn-restart" class="btn-secondary" data-i18n="menu.restart"></button>
+                    <button id="btn-home" class="btn-secondary" data-i18n="menu.home"></button>
+                </div>
+                <p id="menu-keyhint" data-i18n="menu.keyhint"></p>
+            </div>
+            <div id="lang-switch"></div>
+        </div>
 
         <div id="app"></div>
         

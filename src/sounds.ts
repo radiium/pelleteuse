@@ -37,6 +37,17 @@ async function _loadMotor(): Promise<void> {
     } catch (_) { /* fichier manquant — silencieux */ }
 }
 
+// Appelé sur un geste utilisateur (écran d'accueil) : lève le blocage audio du navigateur
+export function unlockAudio(): void {
+    if (!_motorCtx) void _loadMotor();
+    void pac().resume();
+}
+
+// Coupe le moteur pendant la pause (updateMotor le relance automatiquement)
+export function pauseMotor(): void {
+    if (_motorCtx?.state === 'running') void _motorCtx.suspend();
+}
+
 // inputMag : 0 (arrêt) → 1 (pleine vitesse)
 export function updateMotor(inputMag: number): void {
     if (!_motorCtx) { if (inputMag > 0.01) void _loadMotor(); return; }

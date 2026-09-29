@@ -11,71 +11,46 @@ body {
 canvas {
     display: block;
 }
-#left-panel {
-    position: fixed;
-    top: 16px;
-    left: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-#ui {
-    color: #e0d8c0;
-    font-size: 12px;
-    line-height: 1.8;
-    background: rgba(0, 0, 0, 0.45);
-    padding: 10px 14px;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    pointer-events: auto;
-    user-select: none;
-}
-#ui summary {
-    cursor: pointer;
-    color: #f0c060;
-    font-weight: bold;
-    list-style: none;
-    outline: none;
-}
-#ui summary::before {
-    content: '▶ ';
-    font-size: 9px;
-    vertical-align: middle;
-}
-#ui[open] summary::before {
-    content: '▼ ';
-}
-#ui[open] summary {
-    margin-bottom: 6px;
-}
-#ui b {
-    color: #f0c060;
-}
-#gamepad-indicator {
-    color: #e0d8c0;
-    font-size: 12px;
-    background: rgba(0, 0, 0, 0.45);
-    padding: 8px 12px;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    pointer-events: none;
-}
+/* ── HUD en jeu : deux pastilles de même gabarit ────────────────────────── */
+#menu-hint,
 #hud-counters {
     position: fixed;
     top: 16px;
-    right: 16px;
-    color: #e0d8c0;
-    font-size: 14px;
-    line-height: 2.1;
-    background: rgba(0, 0, 0, 0.45);
-    padding: 10px 14px;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    pointer-events: none;
-    text-align: right;
+    height: 38px;
     display: flex;
     align-items: center;
-    gap: 20px;
+    padding: 0 14px;
+    color: #e0d8c0;
+    font-family: inherit;
+    font-size: 13px;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    transition: opacity 0.5s ease, border-color 0.15s ease;
+}
+#menu-hint {
+    left: 16px;
+    gap: 8px;
+    cursor: pointer;
+}
+#menu-hint kbd {
+    min-width: 0;
+    padding: 1px 6px;
+    font-size: 11px;
+}
+#menu-hint.dim {
+    opacity: 0.3;
+}
+#menu-hint:hover,
+#menu-hint:focus-visible {
+    opacity: 1;
+    border-color: rgba(240, 192, 96, 0.6);
+    outline: none;
+}
+#hud-counters {
+    right: 16px;
+    gap: 16px;
+    pointer-events: none;
 }
 #hud-counters .score {
     display: flex;
@@ -83,10 +58,215 @@ canvas {
     gap: 6px;
 }
 #hud-counters .icon {
-    font-size: 22px;
+    font-size: 18px;
     line-height: 1;
-    vertical-align: middle;
 }
 #hud-counters .value {
-    font-size: 16px;
+    font-size: 15px;
+    font-weight: bold;
+}
+
+/* Notification (connexion manette…) */
+#toast {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    z-index: 10;
+    padding: 10px 18px;
+    color: #e0d8c0;
+    font-size: 14px;
+    font-weight: bold;
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(240, 192, 96, 0.6);
+    border-radius: 8px;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -12px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+#toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+/* Clavier ou manette selon le dernier périphérique utilisé */
+.kb-only,
+.gp-only {
+    display: contents;
+}
+body:not(.device-gamepad) .gp-only,
+body.device-gamepad .kb-only {
+    display: none;
+}
+
+/* ── Écran d'accueil / pause ─────────────────────────────────────────────── */
+#menu {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 20px;
+    padding: 5vh 16px 16px;
+    background: rgba(0, 0, 0, 0.25);
+    user-select: none;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+}
+body.menu-open #menu {
+    opacity: 1;
+    pointer-events: auto;
+}
+#menu-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    max-width: 100%;
+    overflow-y: auto;
+    padding: 28px 36px;
+    color: #e0d8c0;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+}
+#menu h1 {
+    font-size: clamp(40px, 9vw, 80px);
+    letter-spacing: 0.08em;
+    color: #f0c060;
+    text-shadow: 0 4px 0 #8a5a10, 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+#menu-sub {
+    margin-top: -8px;
+    font-size: 20px;
+    font-weight: bold;
+    color: #e0d8c0;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+#menu-controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px 32px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: left;
+}
+#menu-controls h2 {
+    font-size: 12px;
+    color: #f0c060;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+#menu-controls dl {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 6px 12px;
+    align-items: center;
+    font-size: 14px;
+}
+#menu-controls dt {
+    display: flex;
+    gap: 4px;
+}
+kbd {
+    display: inline-block;
+    min-width: 26px;
+    padding: 3px 7px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: bold;
+    text-align: center;
+    color: #1a1a2e;
+    background: #e0d8c0;
+    border-radius: 5px;
+    box-shadow: 0 2px 0 #8a826c;
+}
+#menu-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
+#menu-actions button {
+    font-family: inherit;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease;
+}
+#menu-actions button:hover {
+    transform: translateY(-1px);
+}
+#menu-actions button:active {
+    transform: translateY(1px);
+}
+#menu-actions button:focus-visible,
+#lang-switch button:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+.btn-primary {
+    min-width: 200px;
+    padding: 12px 28px;
+    font-size: 20px;
+    color: #1a1a2e;
+    background: #f0c060;
+    border: none;
+    box-shadow: 0 3px 0 #8a5a10;
+}
+.btn-primary:hover {
+    background: #f6cf7c;
+}
+.btn-secondary {
+    padding: 12px 18px;
+    font-size: 15px;
+    color: #e0d8c0;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.btn-secondary:hover {
+    border-color: rgba(240, 192, 96, 0.7);
+}
+#menu-keyhint {
+    margin-top: -4px;
+    font-size: 11px;
+    opacity: 0.6;
+}
+
+#lang-switch {
+    display: flex;
+    gap: 6px;
+}
+#lang-switch button {
+    padding: 4px 10px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: bold;
+    color: #e0d8c0;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    cursor: pointer;
+}
+#lang-switch button:hover {
+    border-color: rgba(240, 192, 96, 0.6);
+}
+#lang-switch button.active {
+    color: #1a1a2e;
+    background: #f0c060;
+    border-color: #f0c060;
+}
+
+/* HUD masqué pendant le menu */
+body.menu-open #hud-counters,
+body.menu-open #menu-hint {
+    opacity: 0;
+    pointer-events: none;
 }

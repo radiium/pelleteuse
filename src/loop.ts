@@ -1,17 +1,18 @@
 import * as THREE from 'three';
 import { excavator } from './excavator';
-import { readInputs } from './input';
+import { pollInputDevice, readInputs } from './input';
 import type { Inputs } from './input';
 import './lights';
 import { camera, controls, renderer, scene } from './scene';
 import { sampleHeight, terrainGeo, TERRAIN_SIZE } from './terrain';
 import { spawnDust, spawnFlame, updateAllParticles } from './particles';
-import { checkCollisions } from './world';
+import { checkCollisions, resetWorld } from './world';
 import { ARM_SPEED, DUST_INTERVAL, FLAME_INTERVAL, JUMP_FORCE, JUMP_GRAVITY, SLOPE_SAMPLE_DIST, SPEED, TURN } from './config';
-import { soundJump, soundLand, playHorn, startFlame, stopFlame, updateMotor } from './sounds';
-import { updateCharacters } from './characters';
+import { soundJump, soundLand, playHorn, startFlame, stopFlame, updateMotor, unlockAudio, pauseMotor } from './sounds';
+import { resetCharacters, updateCharacters } from './characters';
 import { expDecay } from './utils';
 import { updateHUD } from './hud';
+import { getGameState, initMenu, pollMenuGamepad } from './menu';
 
 const timer = new THREE.Timer();
 
@@ -46,6 +47,51 @@ const _camDelta        = new THREE.Vector3();
 const _camOffset       = new THREE.Vector3();
 const _camDesired      = new THREE.Vector3();
 const _lookAtTarget    = new THREE.Vector3();
+
+// ── Menu : orbite caméra + intro de démarrage ──
+const ORBIT_RADIUS   = 16;
+const ORBIT_HEIGHT   = 6;
+const ORBIT_SPEED    = 0.15;
+const MENU_LOOK_UP   = 6.5;    // vise au-dessus de la pelleteuse → elle apparaît sous la card du menu
+const INTRO_FLAMES   = 0.7;  // durée de la rafale de flammes au démarrage (s)
+const CAM_SETTLE     = 1.5;  // durée du retour caméra vers la chase cam (s)
+const _farAway       = new THREE.Vector3(1e6, 0, 1e6); // les monstres errent sans fuir ni mourir
+let _orbitAngle      = Math.PI * 0.75; // vue 3/4 arrière au lancement
+let _introFlameTimer = 0;
+let _camSettleTimer  = 0;
+const _armRest       = [excavator.boomPivot.rotation.x, excavator.stickPivot.rotation.x, excavator.godetPivot.rotation.x];
+
+initMenu({
+    onStart() {
+        unlockAudio();
+        playHorn();
+        _introFlameTimer = INTRO_FLAMES;
+        _camSettleTimer  = CAM_SETTLE;
+    },
+    onPause() {
+        stopFlame();
+        pauseMotor();
+        // L'orbite repart de la position actuelle de la caméra
+        const ex = excavator.group.position;
+        _orbitAngle = Math.atan2(camera.position.x - ex.x, camera.position.z - ex.z) - heading;
+    },
+    onResume() {
+        _camSettleTimer = CAM_SETTLE;
+    },
+    onReset() {
+        resetWorld();
+        resetCharacters();
+        stopFlame();
+        heading = 0;
+        _velY = 0;
+        _onGround = true;
+        _dustTimer = _flameTimer = 0;
+        slopeQuat.identity();
+        excavator.group.quaternion.identity();
+        excavator.group.position.set(0, sampleHeight(0, 0, terrainGeo.attributes.position), 0);
+        [excavator.boomPivot.rotation.x, excavator.stickPivot.rotation.x, excavator.godetPivot.rotation.x] = _armRest;
+    },
+});
 
 function update(dt: number): void {
     const inp = readInputs();
@@ -126,7 +172,8 @@ function update(dt: number): void {
     _hornWasActive = inp.horn;
 
     // ── Flammes ──
-    if (inp.fire) {
+    _introFlameTimer = Math.max(0, _introFlameTimer - dt);
+    if (inp.fire || _introFlameTimer > 0) {
         startFlame();
         _flameTimer += dt;
         while (_flameTimer >= FLAME_INTERVAL) {
@@ -156,10 +203,11 @@ function updateCamera(dt: number, fwd: number, rot: number): void {
     _camDelta.copy(excavator.group.position).sub(_prevExcPos);
     camera.position.add(_camDelta);
     _prevExcPos.copy(excavator.group.position);
-    if (Math.abs(fwd) > 0.05 || Math.abs(rot) > 0.05) {
+    _camSettleTimer = Math.max(0, _camSettleTimer - dt);
+    if (Math.abs(fwd) > 0.05 || Math.abs(rot) > 0.05 || _camSettleTimer > 0) {
         _camOffset.set(0, 7, -20).applyAxisAngle(_worldUp, heading);
         _camDesired.copy(excavator.group.position).add(_camOffset);
-        camera.position.lerp(_camDesired, expDecay(1.5, dt));
+        camera.position.lerp(_camDesired, expDecay(_camSettleTimer > 0 ? 3 : 1.5, dt));
     }
     _lookAtTarget.copy(excavator.group.position);
     _lookAtTarget.y += 1.5;
@@ -167,11 +215,37 @@ function updateCamera(dt: number, fwd: number, rot: number): void {
     camera.lookAt(_camLookAt);
 }
 
+// Écran d'accueil / pause : caméra en orbite lente autour de la pelleteuse
+function updateMenu(dt: number): void {
+    _orbitAngle += ORBIT_SPEED * dt;
+    const ex = excavator.group.position;
+    _camDesired.set(
+        ex.x + Math.sin(heading + _orbitAngle) * ORBIT_RADIUS,
+        ex.y + ORBIT_HEIGHT,
+        ex.z + Math.cos(heading + _orbitAngle) * ORBIT_RADIUS,
+    );
+    camera.position.lerp(_camDesired, expDecay(2, dt));
+    _prevExcPos.copy(ex);
+    _lookAtTarget.copy(ex);
+    _lookAtTarget.y += 1.5 + MENU_LOOK_UP;
+    _camLookAt.lerp(_lookAtTarget, expDecay(3, dt));
+    camera.lookAt(_camLookAt);
+
+    // Sur l'écran titre, le monde reste vivant ; en pause, tout est figé
+    if (getGameState() === 'title') {
+        updateCharacters(dt, _farAway);
+        updateAllParticles(dt);
+    }
+}
+
 function animate(): void {
     requestAnimationFrame(animate);
     timer.update();
     const dt = Math.min(timer.getDelta(), 0.05);
-    update(dt);
+    pollInputDevice();
+    pollMenuGamepad();
+    if (getGameState() === 'playing') update(dt);
+    else updateMenu(dt);
     renderer.render(scene, camera);
 }
 

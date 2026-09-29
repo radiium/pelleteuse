@@ -4,10 +4,12 @@ import { randomPos, sampleHeight, terrainGeo } from './terrain';
 import { explodeBarrel, explodeRock } from './particles';
 import { soundCrack, soundExplosion, soundRock } from './sounds';
 import { BARREL_COUNT, ROCK_COUNT, TREE_COUNT } from './config';
+import { disposeObject } from './utils';
 
 // ── Interface commune ─────────────────────────────────────────────────────────
 
 interface Collidable {
+    readonly object:   THREE.Object3D;
     readonly position: THREE.Vector3;
     readonly radius:   number;
     readonly isAlive:  boolean;
@@ -26,6 +28,7 @@ class Rock implements Collidable {
     readonly radius: number;
     private _alive = true;
 
+    get object()   { return this.mesh; }
     get position() { return this.mesh.position; }
     get isAlive()  { return this._alive; }
 
@@ -62,6 +65,7 @@ class Barrel implements Collidable {
     readonly radius = 0.32;
     private _alive  = true;
 
+    get object()   { return this.obj; }
     get position() { return this.obj.position; }
     get isAlive()  { return this._alive; }
 
@@ -101,6 +105,7 @@ class Tree implements Collidable {
     private _fallAxis:  THREE.Vector3 | null = null;
     private _fallAngle = 0;
 
+    get object()   { return this.group; }
     get position() { return this.group.position; }
     get isAlive()  { return !(this._fallAxis === null && this._fallAngle > 0); }
 
@@ -162,9 +167,20 @@ export function getDestroyedCounts() {
 
 const entities: Collidable[] = [];
 
-for (let i = 0; i < ROCK_COUNT;   i++) entities.push(new Rock());
-for (let i = 0; i < BARREL_COUNT; i++) entities.push(new Barrel());
-for (let i = 0; i < TREE_COUNT;   i++) entities.push(new Tree());
+function spawnEntities(): void {
+    for (let i = 0; i < ROCK_COUNT;   i++) entities.push(new Rock());
+    for (let i = 0; i < BARREL_COUNT; i++) entities.push(new Barrel());
+    for (let i = 0; i < TREE_COUNT;   i++) entities.push(new Tree());
+}
+spawnEntities();
+
+// Nouvelle partie : repeuple le terrain et remet les compteurs à zéro
+export function resetWorld(): void {
+    for (const e of entities) disposeObject(e.object);
+    entities.length = 0;
+    _rocksDestroyed = _barrelsDestroyed = _treesDestroyed = 0;
+    spawnEntities();
+}
 
 export function checkCollisions(excavatorPos: THREE.Vector3, dt: number): void {
     for (let i = entities.length - 1; i >= 0; i--) {

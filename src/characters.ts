@@ -4,6 +4,7 @@ import { randomPos, sampleHeight, TERRAIN_SIZE, terrainGeo } from './terrain';
 import { CHARACTER_COUNT } from './config';
 import { spawnConfetti } from './particles';
 import { soundMonster } from './sounds';
+import { disposeObject } from './utils';
 
 const _posAttr = terrainGeo.attributes.position;
 
@@ -181,7 +182,18 @@ export function getDestroyedMonsters() { return _monstersDestroyed; }
 // ── Instances + API publique ──────────────────────────────────────────────────
 
 const characters: Character[] = [];
-for (let i = 0; i < CHARACTER_COUNT; i++) characters.push(new Character());
+function spawnCharacters(): void {
+    for (let i = 0; i < CHARACTER_COUNT; i++) characters.push(new Character());
+}
+spawnCharacters();
+
+// Nouvelle partie : remplace tous les monstres et remet le compteur à zéro
+export function resetCharacters(): void {
+    for (const c of characters) disposeObject(c.group);
+    characters.length = 0;
+    _monstersDestroyed = 0;
+    spawnCharacters();
+}
 
 export function updateCharacters(dt: number, excavatorPos: THREE.Vector3): void {
     for (let i = characters.length - 1; i >= 0; i--) {
