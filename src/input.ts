@@ -26,32 +26,35 @@ export function deadzone(v: number, dz = 0.12): number {
 }
 
 export interface Inputs {
-    fwd:      number;
-    rot:      number;
-    jump:     boolean;
-    horn:     boolean;
-    fire:     boolean;
-    boomUp:   number;
+    fwd: number;
+    rot: number;
+    jump: boolean;
+    horn: boolean;
+    fire: boolean;
+    boomUp: number;
     stickExt: number;
     godetRot: number;
 }
 
 export function readInputs(): Inputs {
-    const gp   = getGamepad();
+    const gp = getGamepad();
     const gpLX = gp ? deadzone(gp.axes[0]) : 0;
     const gpLY = gp ? deadzone(gp.axes[1]) : 0;
     const gpRX = gp ? deadzone(gp.axes[2]) : 0;
     const gpRY = gp ? deadzone(gp.axes[3]) : 0;
 
     return {
-        fwd:      (keys['KeyZ'] || keys['ArrowUp']    ? 1 : 0) - (keys['KeyS'] || keys['ArrowDown']  ? 1 : 0) + gpLY,
-        rot:      (keys['KeyQ'] || keys['ArrowLeft']  ? 1 : 0) - (keys['KeyD'] || keys['ArrowRight'] ? 1 : 0) - gpLX,
-        jump:     !!(keys['Space'] || (gp?.buttons[2]?.pressed ?? false)),
-        horn:     !!(keys['KeyH'] || (gp?.buttons[1]?.pressed ?? false)),
-        fire:     !!(keys['KeyF'] || (gp?.buttons[0]?.pressed ?? false)),
-        boomUp:   (keys['KeyI'] ? 1 : 0) - (keys['KeyK'] ? 1 : 0) +
-                  (gp ? (gp.buttons[12]?.pressed ? 1 : gp.buttons[13]?.pressed ? -1 : 0) : 0),
+        fwd: (keys['KeyZ'] || keys['ArrowUp'] ? 1 : 0) - (keys['KeyS'] || keys['ArrowDown'] ? 1 : 0) - gpLY,
+        rot:
+            (keys['KeyQ'] || keys['ArrowLeft'] ? 1 : 0) - (keys['KeyD'] || keys['ArrowRight'] ? 1 : 0) - gpLX,
+        jump: !!(keys['Space'] || (gp?.buttons[2]?.pressed ?? false)),
+        horn: !!(keys['KeyH'] || (gp?.buttons[1]?.pressed ?? false)),
+        fire: !!(keys['KeyF'] || (gp?.buttons[0]?.pressed ?? false)),
+        boomUp:
+            (keys['KeyI'] ? 1 : 0) -
+            (keys['KeyK'] ? 1 : 0) +
+            (gp ? (gp.buttons[12]?.pressed ? 1 : gp.buttons[13]?.pressed ? -1 : 0) : 0),
         stickExt: (keys['KeyJ'] ? 1 : 0) - (keys['KeyL'] ? 1 : 0) - gpRX,
-        godetRot: (keys['KeyU'] ? 1 : 0) - (keys['KeyO'] ? 1 : 0) - gpRY,
+        godetRot: (keys['KeyU'] ? 1 : 0) - (keys['KeyO'] ? 1 : 0) - gpRY
     };
 }
